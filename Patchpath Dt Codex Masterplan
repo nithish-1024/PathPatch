@@ -1,0 +1,416 @@
+# PatchPath Universal & Idea/Project Upskiller — End-to-End Codex & Claude Code Master Specification
+
+> **SYSTEM INSTRUCTION FOR CODEX / CLAUDE CODE:**
+> You are building **PatchPath Universal**, an end-to-end, full-stack Engineering Remediation & Project/Idea Upskiller platform.
+> - **DO NOT** build a generic SaaS dashboard or a text-only ChatGPT wrapper.
+> - **DO NOT** rely on external `.glb` or `.gltf` URLs that might 404; generate all 3D models procedurally using `@react-three/fiber`, `@react-three/drei`, and `three` parametric geometries and custom shaders.
+> - **BUILD END-TO-END:** Implement the complete SQLite database (`patchpath.db`), JWT/Cookie User Authentication, the **Universal Idea & Project Upskiller Engine**, the **3 Pre-Seeded Cross-Departmental Interactive 3D Demos** (CS Software Repo, ECE Smart PCB Circuit, Civil/Mechanical Structural Truss), the **Live Custom Repo / Idea Analyzer**, and the **Award-Grade Scrollytelling + 3D Studio Viewport**.
+
+---
+
+## 1. Lexicon Architecture Translation & Product Definition
+
+### 1.1 Lexicon Upgrade Matrix (Casual Requirement -> Concrete Engineering Mechanism)
+- **"Whatever idea, prompt, or repository you give, it should upskill it to the best"** -> **Multi-Stage Neuro-Symbolic Project & Idea Upskiller Pipeline (`UpskillerDAG`)**:
+  - **Mechanism:** Accepts any raw input (`raw_idea_prompt`, `github_repo_url`, `package_json_text`, `circuit_netlist_json`, or `truss_spec_json`). Runs a 5-stage deterministic + LLM pipeline:
+    1. **Domain & Bottleneck Classifier:** Detects whether the input is Software (CS/IT), Electronics (ECE/EEE), or Structural/Mechanical (Civil/Mech), and extracts every explicit entity, dependency, or component constraint.
+    2. **Lexicon Architect Upgrader:** Translates casual user phrasing into a 4-Layer Principal-Architect Specification (Experience, Product Services, Intelligence/Workflow, Runtime/Operations) + system state machine.
+    3. **Vulnerability & Bottleneck Scanner:** Queries OSV.dev / AST call graphs (for repos) or deterministic physics/rule evaluators (for ECE/Civil/Mech ideas) to find the top 3 failure points, outdated libraries, or design bottlenecks.
+    4. **3-Plan Remediation & Upskill Generator:** Generates three concrete upgrade paths:
+       - `Plan A (Naive Upgrade / Basic Implementation)`: Shows why the common 90% approach fails or breaks compatibility.
+       - `Plan B (PatchPath Surgical Minimal Fix)`: Smallest validated change set that fixes the vulnerability/bottleneck with zero regressions.
+       - `Plan C (Full Architectural Upskill)`: High-novelty neuro-symbolic + 3D twin architecture upgrade.
+    5. **Procedural 3D Twin Synthesizer:** Emits a typed `SystemGraph` JSON (`nodes`, `edges`, `faults`, `patches`, `shaderUniforms`) that immediately renders an interactive 3D model of the user's custom idea or repository in the viewport.
+- **"User authentication and SQLite backend where entries are stored"** -> **FastAPI + SQLAlchemy 2.0 (`sqlite:///./patchpath.db`) + `bcrypt` Password Hashing + `HTTPOnly` JWT / Bearer Auth**:
+  - **Mechanism:** Every user can register, log in, or click **"1-Click Judge Demo Login"**. All custom repository scans, upskilled ideas, sandbox test runs, and generated diffs are persisted in SQLite and listed in the user's personal History Sidebar.
+- **"Show the 3 Demos as demos themselves, plus allow other repositories and ideas"** -> **Dual-Mode Workspace (`Showcase Demo Mode` + `Live Upskiller Studio Mode`)**:
+  - **Mechanism:**
+    - **Mode 1 — Pre-Loaded Department Demos (Zero-Setup for Judges):** Instant 1-click access to **Demo 01 (CS: `lodash@4.17.20` AST & Docker Remediation)**, **Demo 02 (ECE: `LM7805` Overheating 5V IoT PCB Regulator Remediation)**, and **Demo 03 (Civil/Mech: Bridge Truss Member `B4-C4` Buckling & Stiffness Matrix Remediation)**.
+    - **Mode 2 — Live Repo & Idea Upskiller:** Users paste any GitHub URL, upload a `package.json` / code snippet, or type any raw engineering project idea (e.g., *"Build a smart solar microgrid controller"* or *"Upgrade my Express + Mongoose auth API"*), and PatchPath generates the full Principal-Architect Spec, 3D Digital Twin graph, failure analysis, and downloadable patch bundle, saving it to SQLite.
+
+---
+
+## 2. Reverse-Engineered Frontend UI, Scroll Mechanics & 3D Component Spec
+
+This section contains the exact DOM hierarchy, CSS variables, scroll physics, cursor-tracking math, and 3D shader specifications required to build the frontend.
+
+### 2.1 Color Tokens, Typography & Surface Recipes (`frontend/src/index.css` & `DESIGN.md`)
+- **Dual-Theme CSS Variables (Editorial Museum Parchment + Deep Obsidian Telemetry):**
+  - `--bg-parchment: #F7F4EB;` (Default light editorial canvas for maximum judge readability)
+  - `--bg-obsidian: #090B10;` (Dark mode canvas for glowing particle nebula and shader contrast)
+  - `--surface-glass-light: rgba(255, 255, 255, 0.76);`
+  - `--surface-glass-dark: rgba(16, 20, 29, 0.74);`
+  - `--border-hairline-light: rgba(20, 20, 19, 0.09);`
+  - `--border-hairline-dark: rgba(255, 255, 255, 0.12);`
+  - `--text-ink: #141413;`
+  - `--text-muted: #5C5A54;`
+  - `--accent-crimson: #E11D48;` (Vulnerable / Thermal Overload / Buckling Fault)
+  - `--accent-amber: #D97706;` (Naive Upgrade Regression Warning)
+  - `--accent-emerald: #059669;` (Validated Minimal Patch)
+  - `--accent-cobalt: #2563EB;` (Active Selection & Blueprint Callout)
+- **Liquid Glass Card Recipe (`.glass-panel`):**
+  ```css
+  .glass-panel {
+    background: var(--surface-glass-light);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--border-hairline-light);
+    box-shadow:
+      0 20px 40px -15px rgba(0, 0, 0, 0.07),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
+    border-radius: 20px;
+  }
+  ```
+- **Google Fonts (`index.html`):**
+  - **Display Serif (`--font-display`):** `'Instrument Serif', Georgia, serif` — Hero titles, Specimen names (`Hoopoe` / `Lodash@4.17.20` / `LM7805 Regulator`), `font-size: clamp(2.5rem, 4.5vw, 4.25rem)`, `line-height: 0.96`, `letter-spacing: -0.02em`.
+  - **UI Sans (`--font-sans`):** `'Plus Jakarta Sans', -apple-system, sans-serif` — Navigation pills, body copy, button labels.
+  - **Telemetry Mono (`--font-mono`):** `'JetBrains Mono', monospace` — CVE IDs, temperatures (`118.4°C`), stress values (`265 MPa`), coverage percentages (`94.2%`), `font-variant-numeric: tabular-nums`.
+
+### 2.2 Smooth Scrolling & Scrollytelling Mechanics (`Lenis` + `GSAP ScrollTrigger`)
+- **Smooth Scroll Provider (`frontend/src/components/motion/SmoothScrollProvider.tsx`):**
+  - Initialize `Lenis` (`duration: 1.15`, `easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))`, `smoothWheel: true`).
+  - Synchronize Lenis with `gsap.ticker`:
+    ```ts
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+    ```
+  - Respect `window.matchMedia('(prefers-reduced-motion: reduce)')`: if enabled, bypass Lenis and disable camera spline scrubbing.
+- **Word-by-Word Blur Reveal Headline (`frontend/src/components/motion/BlurRevealHeadline.tsx`):**
+  - Splits headline text into `<span className="inline-block will-change-transform">` words.
+  - Animates each word from `{ opacity: 0, filter: 'blur(12px)', y: 24 }` to `{ opacity: 1, filter: 'blur(0px)', y: 0 }` using `stagger: 0.045`, `duration: 0.75`, `ease: 'power3.out'`.
+- **Pinned Scroll-Scrubbed Story Intro (`frontend/src/components/layout/ScrollyHeroSection.tsx`):**
+  - Outer container has `height: 260vh`; inner viewport has `position: sticky; top: 0; height: 100vh; overflow: hidden`.
+  - As the user scrolls from `0%` to `100%` of the hero container, a `ScrollTrigger` (`scrub: 0.8`) interpolates the 3D camera `position.z` from `14` (macro system overview) down to `5.2` (microscopic focus on the broken dependency/component node) while cross-fading three narrative overlay banners:
+    - `0% – 33%`: *"Every Engineering System is a Web of Dependencies."*
+    - `34% – 66%`: *"Naive Updates Fix One Issue — And Break Three Connected Systems."*
+    - `67% – 100%`: *"PatchPath Simulates, Classifies Failures, and Proves the Smallest Safe Fix."*
+
+### 2.3 The 6 Reverse-Engineered Studio UI Components (Interactive Workspace)
+
+1. **`TopWorkspaceBar.tsx` (Mode Switcher, Upskiller Trigger & Auth Profile):**
+   - Left: Brand mark `PATCHPATH // UNIVERSAL` + active status dot.
+   - Center Segmented Pill Switcher (`layoutId="active-mode-pill"`):
+     - `01 // CS Repo (Lodash CVE)`
+     - `02 // ECE Circuit (LM7805 Thermal)`
+     - `03 // Civil/Mech (Truss B4-C4)`
+     - `04 // ✨ AI Project & Idea Upskiller`
+   - Right: Theme toggle (`Parchment` / `Obsidian`), History Drawer button (`Saved Runs`), and User Auth Pill (`Judge Demo Account` or Login/Register modal trigger).
+
+2. **`LeftInspectionRail.tsx` (Vertical Specimen Atlas Icon Rail):**
+   - Floating vertical glass dock (`position: absolute; left: 24px; top: 50%; transform: translateY(-50%); width: 64px` expanding to `200px` on hover).
+   - 6 layer buttons that dynamically switch the 3D shader and overlay mode:
+     - `Overview` (Default PBR physical materials + callouts)
+     - `Topology` (Wireframe + directed dependency/signal graph edges)
+     - `Thermal / Stress` (Vertex/fragment heatmap shader showing °C, MPa, or CVE severity)
+     - `Flow / AST` (Animated instanced particles flowing along call paths / current traces / load vectors)
+     - `Sandbox Logs` (Real-time container / solver execution stream)
+     - `Patch Diff` (Opens the split-screen before/after code, BOM, or structural spec viewer)
+
+3. **`Center3DViewport.tsx` (Interactive R3F Canvas + Cursor Tracking + Camera Rig):**
+   - Uses `<Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2.5, 7.5], fov: 38 }}>`.
+   - **Cursor-Tracking Spring Group (`<CursorTiltRig>`):**
+     - Inside `useFrame((state, delta) => { ... })`, smoothly interpolates the root 3D group rotation toward the mouse cursor:
+       ```ts
+       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, state.pointer.x * 0.28, 4 * delta);
+       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -state.pointer.y * 0.18, 4 * delta);
+       ```
+   - **3D-to-2D Projected SVG Spatial Callouts (`SpatialCalloutOverlay.tsx`):**
+     - Uses `@react-three/drei`'s `<Html>` or `vector.project(camera)` to draw crisp 1px SVG polyline leader lines from exact 3D component coordinates (`[x, y, z]`) out to peripheral KPI glass cards with hairline borders and `tabular-nums` counters.
+
+4. **`RightTelemetryAtlasCard.tsx` (Editorial Specimen Header + 2x2 Key Facts + Tactical Stat Bars):**
+   - Top section: Editorial display serif title of the inspected system (`Lodash @ 4.17.20`, `Regulator U1: LM7805`, `Truss Node B4–C4`, or the user's custom upskilled project title) + status pill (`VULNERABLE`, `SIMULATING`, `VALIDATED`).
+   - Middle section: **2x2 Key Facts Grid** with hairline borders (`Primary Metric`, `Blast Radius`, `Sandbox Latency`, `Failure Code`).
+   - Bottom section: **4 Segmented Tactical Progress Bars** (each divided into 10 glowing segments that animate width & color on plan selection):
+     - `SECURITY / SAFETY SCORE` (`0–100`)
+     - `BUILD / THERMAL STABILITY` (`0–100`)
+     - `TEST / SIMULATION EVIDENCE` (`0–100`)
+     - `MINIMAL BLAST RADIUS` (`0–100`)
+   - Primary CTA Button: **`RUN ISOLATED SANDBOX`** (triggers the 5-step SSE execution stream and GSAP camera choreography) + **`VIEW VERIFIED PATCH DIFF`**.
+
+5. **`BottomPlanDeck.tsx` (3 Candidate Upgrade Cards with Failure Classification Badges):**
+   - Horizontal dock at bottom-left (`Plan A: Naive Upgrade`, `Plan B: PatchPath Surgical Fix [RECOMMENDED]`, `Plan C: Full Architectural Refactor`).
+   - Clicking any plan immediately updates the 3D scene shader:
+     - Selecting **Plan A** shows downstream regression failures in pulsing amber/red (`API_SIGNATURE_MISMATCH`, `ESR_RAIL_OSCILLATION`, or `ADJACENT_JOINT_SHEAR_OVERLOAD`).
+     - Selecting **Plan B** cools/stabilizes the 3D model into liquid emerald-chrome (`metalness: 0.92, roughness: 0.12`) with 100% green downstream nodes.
+
+6. **`IdeaAndRepoUpskillerModal.tsx` (The Universal Project & Idea Upskiller Studio):**
+   - Full interactive studio tab where the user can input:
+     - **Option A — Any Raw Project Idea or Casual Prompt:** (e.g., *"I want to build an AI attendance system for my college"* or *"Make a drone battery management circuit"* or *"Improve our PatchPath DT project"*).
+     - **Option B — Any GitHub Repository URL or `package.json` / `requirements.txt` paste.**
+     - **Option C — Target Department Lens:** `Auto-Detect`, `Computer Science / AI`, `Electronics / IoT (ECE)`, `Civil / Structural`, `Mechanical / Robotics`, or `All-Department DT Fusion`.
+   - Clicking **`UPSKILL & GENERATE 3D TWIN`** runs the backend `UpskillerDAG`, streams progress via SSE, saves the result to SQLite, renders a custom interactive 3D architecture graph in the viewport, and outputs a downloadable **Principal-Architect Specification + 3-Angle Pitch + Implementation Roadmap**.
+
+---
+
+## 3. Procedural 3D Scenes Specification (Zero External Asset Dependencies)
+
+Implement these four procedural scenes in `frontend/src/scenes/`:
+
+1. **`CodeNebulaScene.tsx` (Demo 01 — CS Software Repository):**
+   - Central core icosahedron (`app-core`) surrounded by 28 procedural dependency nodes arranged in concentric orbital shells.
+   - `lodash@4.17.20` sits at `[1.6, 0.4, 0.8]` with an animated pulsing crimson ring (`<Ring>` + emissive material) and 3 connected AST caller nodes (`authController.ts`, `reportBuilder.ts`, `templateEngine.ts`) linked via `<QuadraticBezierLine>`.
+   - When `Plan A (lodash@5.0.0)` is tested, red shockwave particles travel along the bezier lines and fracture the `templateEngine.ts` node.
+   - When `Plan B (lodash@4.17.21)` is applied, the node turns brushed emerald-chrome and smooth green data pulses flow across all 28 nodes.
+
+2. **`PcbSpecimenScene.tsx` (Demo 02 — ECE Smart PCB Circuit):**
+   - Procedurally constructs a realistic multi-layer `6.0 x 4.0` FR4 circuit board (`<RoundedBox args={[6, 0.16, 4]} radius={0.08}>` in deep matte solder-mask green `#0D3B2E` with gold corner mounting holes).
+   - Populates the board with:
+     - `U1: Voltage Regulator (LM7805 / MCP1702)`: TO-220 package with metallic heatsink fin array at `[-1.2, 0.45, 0.2]`.
+     - `C1 & C2: Decoupling Capacitors`: Cylindrical electrolytic/ceramic meshes at `[-0.2, 0.35, 0.6]` and `[0.4, 0.25, 0.6]`.
+     - `U2: STM32 Microcontroller`: QFP-32 chip body at `[1.4, 0.2, -0.2]` with instanced metallic pins.
+     - `Copper Traces`: Flat glowing tube paths connecting `VIN -> U1 -> C_out -> U2_VDD`.
+   - **Thermal & Ripple Animation:**
+     - Fault state: `U1` glows hot orange-red (`118.4°C`) with rising heat particle sprites.
+     - `Plan A (AMS1117 Naive Swap)`: `C_out` and the `5V` trace flash amber-red with high-frequency vertical sine-wave oscillation (`ESR Ripple: 420mV`), causing `U2` MCU to blink `RESET`.
+     - `Plan B (MCP1702 + 1uF Ceramic Cap)`: Both `U1` and `C_out` smoothly animate a vertical swap-in transition (`y: 1.5 -> 0.35`), cooling the board to `41.2°C` emerald-teal with a flat, stable `4mV` signal line.
+
+3. **`StructuralTrussScene.tsx` (Demo 03 — Civil & Mechanical Warren Truss):**
+   - Procedurally builds a 5-bay 3D steel Warren Bridge Truss (`10 nodes`, `17 structural I-beam / hollow-box struts`, `4 support piers`) using cylinder/box meshes oriented along node vectors (`quaternion.setFromUnitVectors`).
+   - Top chord nodes display animated downward load arrows (`Peak Load: 180 kN`).
+   - **Stress & Deflection Animation:**
+     - Fault state: Diagonal strut `B4-C4` glows crimson (`Buckling Ratio: 1.14 > 1.0`) and visibly bows outward.
+     - `Plan A (Heavy Solid Steel Beam)`: Strut `B4-C4` thickens, but adjacent pin joint `C4` turns bright red and sags downward (`JOINT_SHEAR_OVERLOAD: +340 kg dead weight`).
+     - `Plan B (Hollow Box HSS 100x100x6 + Gusset)`: Strut `B4-C4` morphs into a reinforced hollow box with metallic corner gusset plates; all 17 struts settle into a calm cobalt/emerald safety gradient (`Safety Factor: 1.82`).
+
+4. **`CustomUpskillerGraphScene.tsx` (Mode 04 — Dynamic 3D Architecture Twin for Any User Idea/Repo):**
+   - Renders any `SystemGraph` returned by the `/api/v1/upskiller/analyze` endpoint as a 4-tier 3D architectural sculpture:
+     - **Tier 1 (Top Ring):** Experience & UI / Sensor Intake Nodes
+     - **Tier 2 (Upper Middle):** API / Control & Routing Nodes
+     - **Tier 3 (Lower Middle):** Deterministic Engine / Solver / Database Nodes
+     - **Tier 4 (Base):** Runtime / Hardware / Sandbox Nodes
+   - Highlights bottlenecks found in the user's original idea in crimson and animates the newly injected "Upskilled Modules" in brushed gold/emerald.
+
+---
+
+## 4. Backend Architecture, SQLite Schema & API Contracts (`backend/`)
+
+### 4.1 SQLite Database Schema (`backend/app/db/models.py` via SQLAlchemy 2.0)
+Use `sqlite:///./patchpath.db` (`check_same_thread=False`). Create all tables automatically on startup (`Base.metadata.create_all(bind=engine)`) and seed a default demo user (`demo@patchpath.ai` / `patchpath2026`) plus the 3 golden demo records if empty.
+
+1. **`User` Table (`users`):**
+   - `id`: `Integer, primary_key=True, index=True`
+   - `email`: `String(255), unique=True, index=True, nullable=False`
+   - `full_name`: `String(255), nullable=False`
+   - `department`: `String(100), default="CSE / Interdisciplinary DT"`
+   - `password_hash`: `String(255), nullable=False`
+   - `created_at`: `DateTime, default=datetime.utcnow`
+
+2. **`ProjectAnalysisRun` Table (`project_analysis_runs`):**
+   - `id`: `String(36), primary_key=True` (UUID)
+   - `user_id`: `Integer, ForeignKey("users.id"), nullable=True`
+   - `mode`: `String(50), nullable=False` (`"cs_repo" | "ece_circuit" | "civil_mech" | "custom_upskiller"`)
+   - `title`: `String(255), nullable=False`
+   - `raw_input`: `Text, nullable=False` (Repo URL, `package.json`, netlist, or raw idea text)
+   - `selected_plan_id`: `String(32), default="plan_b"`
+   - `system_graph_json`: `JSON, nullable=False` (Full 3D nodes, edges, telemetry)
+   - `candidate_plans_json`: `JSON, nullable=False` (List of `Plan A`, `Plan B`, `Plan C` with scores and failure classifications)
+   - `upskilled_blueprint_json`: `JSON, nullable=True` (Full Lexicon 4-Layer Spec + Ideator 3-Angle Pitch + Cross-Dept DT extensions)
+   - `created_at`: `DateTime, default=datetime.utcnow`
+
+3. **`SandboxExecutionLog` Table (`sandbox_execution_logs`):**
+   - `id`: `Integer, primary_key=True, index=True`
+   - `run_id`: `String(36), ForeignKey("project_analysis_runs.id"), index=True`
+   - `plan_id`: `String(32), nullable=False`
+   - `step_number`: `Integer, nullable=False` (`1` to `5`)
+   - `step_name`: `String(64), nullable=False` (`"SCAN" | "GENERATE" | "TEST_ISOLATED" | "CLASSIFY_FAILURE" | "RECOMMEND"`)
+   - `status`: `String(32), nullable=False`
+   - `log_output`: `Text, nullable=False`
+   - `duration_ms`: `Integer, nullable=False`
+   - `created_at`: `DateTime, default=datetime.utcnow`
+
+### 4.2 Deterministic Domain Engines (`backend/app/engines/`)
+
+1. **`cs_repo_engine.py` (Real Dependency, AST & Sandbox Evaluator):**
+   - **Pre-loaded Demo 1:** Evaluates `lodash@4.17.20` (`CVE-2021-23337` Command Injection in `_.template` & `CVE-2020-8203` Prototype Pollution).
+   - **Live Custom Repo / `package.json` Mode:**
+     - Parses any uploaded `package.json` or fetches `raw.githubusercontent.com/{owner}/{repo}/HEAD/package.json` (with offline fallback parser if no internet).
+     - Scans dependencies against an embedded curated CVE advisory dictionary (`lodash`, `express`, `axios`, `jsonwebtoken`, `mongoose`, `webpack`, `minimist`, `semver`, `ws`, `tar`, `fastapi`, `pydantic`, `requests`, `flask`, `django`) + live OSV.dev API lookup when online.
+     - Computes the **PatchPath Cost Function** for each candidate plan:
+       $$\text{Cost}(P) = 50 \cdot (\text{RemainingCVEs}) + 40 \cdot (\text{BrokenTestsOrASTCallSites}) + 25 \cdot \left(\frac{\text{ChangedPackages}}{\text{TotalPackages}}\right) - 15 \cdot (\text{TestEvidenceConfidence})$$
+
+2. **`ece_circuit_engine.py` (Real Nodal Thermal & LDO ESR Stability Solver):**
+   - Computes real physics equations for a 5V IoT Sensor Board (`V_in = 12.0V`, `V_out = 5.0V`, `I_load = 0.35A`, `T_ambient = 30.0°C`):
+     - Power dissipation: $P_D = (V_{in} - V_{out}) \cdot I_{load} = (12 - 5) \times 0.35 = 2.45\text{ W}$.
+     - **Initial State (`LM7805` without large heatsink, $R_{\theta JA} = 36^\circ\text{C/W}$):**
+       $$T_J = 30 + (2.45 \times 36) = 118.2^\circ\text{C} \quad (\text{CRITICAL THERMAL OVERLOAD} > 85^\circ\text{C target})$$
+     - **Plan A (`AMS1117-5.0` Naive Swap with existing $0.015\Omega$ MLCC ceramic cap):**
+       - `AMS1117` stability requires $0.4\Omega \le \text{ESR} \le 5.0\Omega$. Because $0.015\Omega < 0.4\Omega$, loop phase margin drops below $10^\circ$, causing `420 mVpp` sub-harmonic oscillation (`FAILURE_CODE: ESR_PHASE_MARGIN_INSTABILITY`).
+     - **Plan B (`PatchPath Minimal Validated Fix`: High-Efficiency Buck/LDO module `MCP1702 / TSR-1-2450` + matched $1\mu\text{F}$ ceramic cap):**
+       - Stabilizes phase margin ($68^\circ$), drops $T_J$ to $41.2^\circ\text{C}$, keeps ripple at $4.0\text{ mVpp}$, and modifies only `2` component pads (`Blast Radius: 14%`).
+
+3. **`civil_truss_engine.py` (Real NumPy 2D/3D Truss Stiffness Matrix Solver):**
+   - Uses `numpy` to compute member axial forces, stresses $\sigma = F / A$, and Euler buckling ratios $\text{BR} = |F_{\text{comp}}| / P_{cr}$ where $P_{cr} = \frac{\pi^2 E I}{(K L)^2}$:
+     - **Initial State:** Member `B4-C4` under `180 kN` peak deck load has $\text{BR} = 1.14 > 1.0$ (`STRUCTURAL_BUCKLING_RISK`).
+     - **Plan A (Naive Solid Steel Beam Swap):** Increases dead weight at Joint `C4` by `+340 kg`, driving gusset bolt shear stress at `C4` to `310 MPa > 250 MPa yield` (`FAILURE_CODE: ADJACENT_JOINT_SHEAR_OVERLOAD`).
+     - **Plan B (PatchPath Minimal Fix — Hollow Structural Section `HSS 100x100x6` + local stiffening gusset):** Drops buckling ratio to `0.55` (`Safety Factor: 1.82`), adds only `+18 kg` dead weight, and keeps all adjacent joints within safe limits (`Blast Radius: 11%`).
+
+4. **`upskiller_engine.py` (The Universal Idea & Project Upskiller Engine):**
+   - Takes any user prompt, project description, or repository summary and returns a structured `UpskilledBlueprint`:
+     1. **`original_weaknesses`:** Identifies why the raw idea looks like a "90% Trap" (e.g., generic CRUD app, pure LLM wrapper, abstract terminal tool).
+     2. **`lexicon_4_layer_spec`:** Automatically generates the 4-layer architecture (`Experience`, `Product Services`, `Neuro-Symbolic Intelligence`, `Runtime & Security`) with exact tech stack and API contracts.
+     3. **`three_fund_my_crazy_angles`:** Generates:
+        - `Angle 1: Zero-Friction Physical/Multimodal Intake`
+        - `Angle 2: Hidden Blindspot & Cascade Failure Detector`
+        - `Angle 3: Closed-Loop Automated Counter-Action`
+     4. **`cross_departmental_dt_bridge`:** Shows how CS/IT, ECE/EEE, Civil, and Mechanical departments connect to the user's idea so any DT professor on a panel is impressed.
+     5. **`generated_3d_system_graph`:** Produces a custom 12–20 node `SystemGraph` with 3 candidate upgrade plans (`Plan A: Naive`, `Plan B: Minimal Verified Upgrade`, `Plan C: Full Flagship`) so the user can immediately simulate and interact with their upskilled idea in the 3D viewport!
+
+### 4.3 REST & SSE API Endpoints (`backend/app/main.py`)
+- `POST /api/v1/auth/register` -> Creates user in SQLite, returns `{ access_token, user }`.
+- `POST /api/v1/auth/login` -> Authenticates email/password against SQLite, returns `{ access_token, user }`.
+- `POST /api/v1/auth/demo-login` -> Instant 1-click login as `Judge Demo Evaluator` (`demo@patchpath.ai`), returning a valid token so judges never get stuck on a form.
+- `GET /api/v1/auth/me` -> Returns current authenticated user profile.
+- `GET /api/v1/demos/{mode}` -> Returns the pre-seeded `ProjectAnalysisRun` (`cs_repo`, `ece_circuit`, or `civil_mech`) from SQLite.
+- `POST /api/v1/simulate/{run_id}` -> Runs the 5-step sandbox verification for `plan_a`, `plan_b`, and `plan_c`, logs every step to `sandbox_execution_logs` in SQLite, and returns the updated run.
+- `GET /api/v1/stream/{run_id}` -> **Server-Sent Events (SSE)** endpoint that streams step-by-step events (`STEP_1_SCAN`, `STEP_2_GENERATE`, `STEP_3_TEST`, `STEP_4_CLASSIFY`, `STEP_5_RECOMMEND`) with `350ms` pacing for live UI + 3D animation choreography.
+- `POST /api/v1/upskiller/analyze` -> Accepts `{ title, raw_input, department_lens }`, runs `upskiller_engine.py` + `cs_repo_engine.py` (if repo/package.json detected), stores the new `ProjectAnalysisRun` in SQLite, and returns the full upskilled blueprint + 3D `SystemGraph`.
+- `GET /api/v1/runs` -> Lists all saved analysis & upskiller runs from SQLite for the History Drawer.
+
+---
+
+## 5. Exact Repository Directory Structure
+
+```text
+patchpath-universal/
+├── DESIGN.md                                 # Design system tokens, typography, and motion rules
+├── README.md                                 # Quickstart & 90-second DT judge demo script
+├── backend/
+│   ├── requirements.txt                      # fastapi, uvicorn, sqlalchemy, pydantic, numpy, passlib[bcrypt], pyjwt, httpx, pytest
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                           # FastAPI app, CORS, startup DB seeding, all routes + SSE
+│   │   ├── db/
+│   │   │   ├── database.py                   # SQLAlchemy engine (sqlite:///./patchpath.db) & SessionLocal
+│   │   │   ├── models.py                     # User, ProjectAnalysisRun, SandboxExecutionLog ORM models
+│   │   │   └── seed.py                       # Seeds Judge Demo user + 3 Golden Department Demos
+│   │   ├── auth/
+│   │   │   └── security.py                   # Password hashing & JWT token creation/verification
+│   │   ├── schemas/
+│   │   │   └── contracts.py                  # Pydantic v2 request/response contracts
+│   │   └── engines/
+│   │       ├── cs_repo_engine.py             # AST & CVE blast-radius + Docker/sandbox evaluator
+│   │       ├── ece_circuit_engine.py         # Nodal thermal (LM7805) & LDO ESR stability solver
+│   │       ├── civil_truss_engine.py         # NumPy Direct Stiffness Matrix (DSM) 3D truss solver
+│   │       └── upskiller_engine.py           # Universal Idea & Repo -> 4-Layer Spec + 3D Twin Generator
+│   └── tests/
+│       └── test_all.py                       # Automated pytest suite verifying Auth, SQLite, 3 Demos & Upskiller
+└── frontend/
+    ├── index.html                            # Loads Instrument Serif, Plus Jakarta Sans, JetBrains Mono
+    ├── package.json                          # react, three, @react-three/fiber, @react-three/drei, gsap, lenis, framer-motion, lucide-react, tailwindcss
+    ├── vite.config.ts
+    └── src/
+        ├── main.tsx
+        ├── index.css                         # CSS variables, liquid glass utility, keyframe animations
+        ├── App.tsx                           # Master layout integrating ScrollyHero + 3D Studio + Modals
+        ├── types/
+        │   └── patchpath.ts                  # TypeScript interfaces matching backend Pydantic schemas
+        ├── api/
+        │   └── client.ts                     # Fetch wrapper with JWT header & SSE stream subscriber
+        ├── components/
+        │   ├── motion/
+        │   │   ├── SmoothScrollProvider.tsx  # Lenis + GSAP ScrollTrigger sync
+        │   │   └── BlurRevealHeadline.tsx    # Staggered word-by-word blur reveal
+        │   ├── layout/
+        │   │   ├── ScrollyHeroSection.tsx    # 260vh pinned scroll-scrubbed intro narrative
+        │   │   ├── TopWorkspaceBar.tsx       # Mode switcher (01 CS, 02 ECE, 03 Civil, 04 Upskiller) + Auth
+        │   │   ├── LeftInspectionRail.tsx    # Vertical floating icon dock (Overview, Topology, Thermal, AST, Logs, Diff)
+        │   │   ├── RightTelemetryAtlasCard.tsx # Editorial title, 2x2 Key Facts grid, 4 segmented HUD bars
+        │   │   ├── BottomPlanDeck.tsx        # 3 Candidate Upgrade Plan cards with failure taxonomy badges
+        │   │   └── SpatialCalloutOverlay.tsx # 3D-to-2D SVG polyline callouts with live metrics
+        │   └── modals/
+        │       ├── AuthModal.tsx             # Sign in, Register, and 1-Click Judge Demo Login
+        │       ├── IdeaAndRepoUpskillerModal.tsx # Universal Idea & Repo Upskiller Studio + 4-Layer Spec View
+        │       ├── PatchDiffModal.tsx        # Clean split-screen diff & deterministic evidence viewer
+        │       └── HistoryDrawer.tsx         # SQLite saved runs & custom upskilled projects list
+        └── scenes/
+            ├── Center3DViewport.tsx          # Canvas, lighting, CursorTiltRig, camera GSAP controller
+            ├── CodeNebulaScene.tsx           # Demo 01: Procedural 3D AST & npm dependency nebula
+            ├── PcbSpecimenScene.tsx          # Demo 02: Procedural 3D FR4 PCB, LM7805 heatsink & thermal shader
+            ├── StructuralTrussScene.tsx      # Demo 03: Procedural 3D Warren Truss with buckling & stress shader
+            └── CustomUpskillerGraphScene.tsx # Mode 04: Dynamic 4-tier 3D architecture twin for custom ideas
+```
+
+---
+
+## 6. Clean, Bullet-Pointed Master Prompt to Copy-Paste into Codex
+
+Copy the entire block below and paste it directly into **Codex / Claude Code / Cursor**:
+
+```markdown
+Build the complete, end-to-end `patchpath-universal` full-stack web application in this repository following these exact bullet-pointed instructions:
+
+### 1. Stack & Architecture Requirements
+- **Backend (`backend/`):** Python 3.11+, FastAPI, SQLAlchemy 2.0 with SQLite (`sqlite:///./patchpath.db`), Pydantic v2, `numpy` (for real matrix/physics calculations), `pyjwt` + `bcrypt` (for JWT authentication), and Server-Sent Events (SSE) for real-time 5-step sandbox streaming.
+- **Frontend (`frontend/`):** React 18, TypeScript, Vite, Tailwind CSS, `three`, `@react-three/fiber`, `@react-three/drei`, `gsap`, `lenis`, `framer-motion`, and `lucide-react`.
+- **Zero External 3D Asset Failures:** Do NOT load external `.glb` or `.gltf` files from the internet. Construct all 3D models procedurally using Three.js parametric geometries (`RoundedBox`, `Cylinder`, `Cone`, `Torus`, `Icosahedron`, `QuadraticBezierLine`, `Instances`) and custom materials/shaders so the 3D scenes load in <300ms and never fail offline.
+
+### 2. SQLite Database & Authentication (`backend/app/db/` & `backend/app/auth/`)
+- Create three SQLAlchemy tables in `patchpath.db`:
+  1. `users`: `id`, `email`, `full_name`, `department`, `password_hash`, `created_at`.
+  2. `project_analysis_runs`: `id` (UUID), `user_id`, `mode` (`cs_repo` | `ece_circuit` | `civil_mech` | `custom_upskiller`), `title`, `raw_input`, `selected_plan_id`, `system_graph_json`, `candidate_plans_json`, `upskilled_blueprint_json`, `created_at`.
+  3. `sandbox_execution_logs`: `id`, `run_id`, `plan_id`, `step_number` (1..5), `step_name`, `status`, `log_output`, `duration_ms`, `created_at`.
+- Implement `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/me`, and a 1-click `/api/v1/auth/demo-login` endpoint that logs in as `demo@patchpath.ai` ("DT Judge Evaluator") so judges can test authenticated persistence with one click.
+- On FastAPI startup, automatically create tables and seed the 3 Golden Department Demos (`cs_repo`, `ece_circuit`, `civil_mech`) plus 1 sample upskilled project into SQLite if not already present.
+
+### 3. The 4 Deterministic Backend Engines (`backend/app/engines/`)
+- **Engine 1 (`cs_repo_engine.py` — CSE/IT Software Repo Remediation):**
+  - Pre-seeded Demo 1 models a Node.js microservice using `lodash@4.17.20` (`CVE-2021-23337` Command Injection in `_.template`).
+  - Also supports analyzing any pasted `package.json` or GitHub repo URL by parsing dependencies against a built-in CVE advisory database (`lodash`, `express`, `axios`, `jsonwebtoken`, `mongoose`, `webpack`, `minimist`, `ws`, `tar`) and AST call-site heuristics.
+  - Generates 3 candidate plans:
+    - `Plan A (Naive Major Bump to lodash@5.0.0)`: Fails in sandbox with `API_SIGNATURE_MISMATCH` (breaks 3 AST caller files: `templateEngine.ts`, `reportBuilder.ts`, `authController.ts`).
+    - `Plan B (PatchPath Surgical Minimal Pin to lodash@4.17.21)`: Passes build, unit tests, and security rescan with `94.2%` coverage-weighted test evidence and `0` broken callers.
+    - `Plan C (Full Native ES Refactor)`: Passes security scan but modifies 14 files (`Blast Radius: 48%`).
+- **Engine 2 (`ece_circuit_engine.py` — ECE/EEE Smart PCB Thermal & LDO Remediation):**
+  - Models a 5V IoT Sensor PCB where `U1: LM7805` linear regulator (`Vin=12V, Vout=5V, Iload=0.35A`) dissipates `2.45W` and overheats at `118.2°C` (`CRITICAL_THERMAL_OVERLOAD > 85°C`).
+  - Computes real nodal thermal and Equivalent Series Resistance (ESR) phase-margin math for 3 candidate plans:
+    - `Plan A (Naive Swap to AMS1117-5.0 with existing 0.015-ohm MLCC cap)`: Fails in sandbox with `ESR_PHASE_MARGIN_INSTABILITY` (`420 mVpp` rail oscillation resets the `STM32` MCU because `AMS1117` requires `0.4 <= ESR <= 5.0 ohm`).
+    - `Plan B (PatchPath Minimal Fix: MCP1702 / TSR-1-2450 + matched 1uF Ceramic Cap)`: Passes simulation (`Temp: 41.2°C`, `Ripple: 4.0 mVpp`, `Phase Margin: 68 deg`, modifies only 2 footprints, `Blast Radius: 14%`).
+    - `Plan C (6-Component Discrete Buck Converter Redesign)`: Passes thermal test (`36.0°C`) but requires PCB re-layout of 8 pads (`Blast Radius: 62%`).
+- **Engine 3 (`civil_truss_engine.py` — Civil & Mechanical 3D Truss Buckling Remediation):**
+  - Uses `numpy` Direct Stiffness Method (DSM) calculations for a 3D steel Warren Bridge Truss under `180 kN` peak load where diagonal member `B4-C4` has an Euler Buckling Ratio of `1.14 > 1.0` (`STRUCTURAL_BUCKLING_RISK`).
+  - Evaluates 3 candidate plans:
+    - `Plan A (Naive Heavy Solid Steel Beam Swap)`: Fixes `B4-C4` buckling but adds `+340 kg` dead weight, causing `ADJACENT_JOINT_SHEAR_OVERLOAD` at Pin Joint `C4` (`310 MPa > 250 MPa yield`).
+    - `Plan B (PatchPath Minimal Retrofit: Hollow Box-Section HSS 100x100x6 + Gusset Plate)`: Passes stiffness solver (`Buckling Ratio: 0.55`, `Safety Factor: 1.82`, dead-weight delta `+18 kg`, `0` adjacent joint failures, `Blast Radius: 11%`).
+    - `Plan C (Full 8-Member Chord Replacement)`: Passes (`Safety Factor: 2.10`) but modifies 8 members (`Blast Radius: 55%`).
+- **Engine 4 (`upskiller_engine.py` — Universal Project & Idea Upskiller):**
+  - Accepts any raw project idea, problem statement, or GitHub repo / `package.json` input plus a department lens (`Auto`, `CSE`, `ECE`, `Civil`, `Mechanical`, `All-Department DT`).
+  - Transforms the raw input into a complete `UpskilledBlueprint` containing:
+    1. `original_90_percent_trap`: What is weak or generic in the raw idea/project.
+    2. `lexicon_4_layer_spec`: Upgraded Principal-Architect Specification across `Experience`, `Product Services`, `Neuro-Symbolic Intelligence`, and `Runtime/Operations`.
+    3. `three_winning_angles`: 3 high-novelty angles (`Zero-Friction Intake`, `Hidden Conflict/Failure Detector`, `Closed-Loop Counter-Action`).
+    4. `cross_department_dt_matrix`: Concrete extensions connecting CSE, ECE, Civil, and Mechanical engineering to the project.
+    5. `system_graph` & `candidate_plans`: A dynamically generated 14-node 3D `SystemGraph` and 3 upgrade plans (`Plan A: Naive`, `Plan B: PatchPath Minimal Verified Upgrade`, `Plan C: Full Flagship`) so the user's custom idea immediately renders as an interactive 3D digital twin in the viewport and saves to SQLite.
+
+### 4. Frontend Design System, Scroll Mechanics & Layout (`frontend/src/`)
+- **Typography & Dual Theme (`index.css`):**
+  - Load Google Fonts `'Instrument Serif'`, `'Plus Jakarta Sans'`, and `'JetBrains Mono'`.
+  - Support switching between **Editorial Parchment Mode (`#F7F4EB`)** and **Obsidian Telemetry Mode (`#090B10`)** with liquid glass panels (`backdrop-filter: blur(20px) saturate(180%)`).
+- **Scrollytelling Intro (`ScrollyHeroSection.tsx` + `SmoothScrollProvider.tsx`):**
+  - Integrate `Lenis` smooth scrolling synced with `gsap.ticker` and `ScrollTrigger`.
+  - Build a compact, collapsible or scroll-through hero banner with word-by-word blur-reveal typography (`BlurRevealHeadline.tsx`) and a "Jump Straight to 3D Studio" button so judges can either experience the scroll story or jump immediately into the interactive workspace.
+- **6 Core Studio Components:**
+  1. `TopWorkspaceBar.tsx`: Mode switcher (`01 CS Repo`, `02 ECE Circuit`, `03 Civil/Mech Truss`, `04 ✨ AI Project & Idea Upskiller`), Parchment/Obsidian theme toggle, Saved History button, and User Auth status/modal trigger.
+  2. `LeftInspectionRail.tsx`: Vertical floating glass icon rail (`Overview`, `Topology`, `Thermal / Stress`, `Flow / AST`, `Sandbox Logs`, `Patch Diff`) that changes the active visualization mode of the 3D viewport.
+  3. `Center3DViewport.tsx`: R3F `<Canvas>` with `<OrbitControls>`, `<CursorTiltRig>` (smooth `THREE.MathUtils.lerp` cursor-tracking rotation), and GSAP camera focus transitions during the 5-step sandbox run.
+  4. `SpatialCalloutOverlay.tsx`: Projected 3D-to-2D SVG leader lines connecting the faulty 3D node directly to floating KPI telemetry badges.
+  5. `RightTelemetryAtlasCard.tsx`: Editorial serif specimen header, 2x2 Key Facts grid, 4 segmented horizontal HUD progress bars (`Security/Safety`, `Build/Thermal Stability`, `Test/Sim Evidence`, `Minimal Blast Radius`), and the `RUN ISOLATED SANDBOX` + `VIEW VERIFIED PATCH DIFF` CTA buttons.
+  6. `BottomPlanDeck.tsx`: 3 interactive cards (`Plan A`, `Plan B [RECOMMENDED]`, `Plan C`) displaying failure classification badges (`API_SIGNATURE_MISMATCH`, `ESR_PHASE_MARGIN_INSTABILITY`, `ADJACENT_JOINT_SHEAR_OVERLOAD`) and updating the 3D scene immediately when clicked.
+- **4 Procedural 3D Scenes (`frontend/src/scenes/`):**
+  1. `CodeNebulaScene.tsx` (3D orbital AST & npm dependency graph with pulsing vulnerable edges and flowing particles).
+  2. `PcbSpecimenScene.tsx` (3D FR4 green/gold PCB with `TO-220 LM7805` heatsink, capacitors, `STM32` QFP chip, copper traces, and thermal crimson-to-emerald-chrome shader transition).
+  3. `StructuralTrussScene.tsx` (3D 5-bay steel Warren Truss bridge with animated load arrows, member buckling deflection, and stress heatmap colors).
+  4. `CustomUpskillerGraphScene.tsx` (4-tier 3D architecture sculpture rendering any custom project or idea upskilled by the user).
+
+### 5. Verification & End-to-End Testing
+- Run `pytest` on `backend/tests/test_all.py` to verify user registration, login, 1-click demo login, SQLite persistence, all 3 domain engines (`cs_repo`, `ece_circuit`, `civil_mech`), SSE streaming, and the `upskiller/analyze` endpoint.
+- Run `npm run build` in `frontend/` to verify zero TypeScript or Vite bundling errors.
+```
+
+---
+
+## 7. Verification Checklist (For After Codex Finishes)
+- [ ] **SQLite Persistence & Auth Works:** Clicking **"1-Click Judge Demo Login"** (or registering a new account) logs in and persists runs in `backend/patchpath.db`.
+- [ ] **All 3 Department Demos Work Out-of-the-Box:** Switching between `01 CS Repo`, `02 ECE Circuit`, and `03 Civil/Mech Truss` switches the procedural 3D model, spatial SVG callouts, and 3 candidate plans immediately.
+- [ ] **5-Step Sandbox Simulation Animates Live:** Clicking **`RUN ISOLATED SANDBOX`** streams Steps 1–5 from the backend, shows why `Plan A` fails with a classified regression code, and highlights `Plan B` in brushed emerald-chrome.
+- [ ] **Universal Idea & Project Upskiller Works:** Opening `04 ✨ AI Project & Idea Upskiller` and typing *any* raw idea or pasting *any* `package.json` generates a 4-Layer Principal-Architect Specification, 3 high-novelty angles, cross-department DT extensions, and a live 3D interactive twin saved to SQLite.
