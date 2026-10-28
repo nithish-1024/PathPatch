@@ -1,11 +1,12 @@
 import asyncio
+import hmac
 import json
 import os
 import re
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.auth.security import (
     create_access_token,
     get_client_ip,
     get_current_user,
+    get_secret_key,
     hash_password,
     is_cookie_secure,
     is_demo_login_allowed,
@@ -193,10 +195,48 @@ def me(user: User = Depends(get_current_user)) -> UserResponse:
 def get_demo(mode: str, db: Session = Depends(get_db)) -> RunResponse:
     if mode not in {"cs_repo", "ece_circuit", "civil_mech", "mechanical_beam", "custom_upskiller"}:
         raise HTTPException(status_code=404, detail="Unknown demo mode.")
-    run = db.query(ProjectAnalysisRun).filter(ProjectAnalysisRun.mode == mode).order_by(ProjectAnalysisRun.created_at.asc()).first()
+    try:
+        run = db.query(ProjectAnalysisRun).filter(ProjectAnalysisRun.mode == mode).order_by(ProjectAnalysisRun.created_at.asc()).first()
+    except Exception:
+        db.rollback()
+        # Initialize schema and seed demo fixtures on initial demand if fresh DB
+        from app.db.database import Base, engine
+        Base.metadata.create_all(bind=engine)
+        from app.db.seed import seed_demo_data
+        seed_demo_data(db)
+        run = db.query(ProjectAnalysisRun).filter(ProjectAnalysisRun.mode == mode).order_by(ProjectAnalysisRun.created_at.asc()).first()
+
+    if run is None:
+        from app.db.seed import seed_demo_data
+        seed_demo_data(db)
+        run = db.query(ProjectAnalysisRun).filter(ProjectAnalysisRun.mode == mode).order_by(ProjectAnalysisRun.created_at.asc()).first()
+
     if run is None:
         raise HTTPException(status_code=503, detail="Demo data is not available yet. Please run database migrations and seeding.")
     return _run_response(run)
+
+
+@app.post("/api/v1/admin/setup-database", include_in_schema=False)
+def setup_database(
+    db: Session = Depends(get_db),
+    x_admin_secret: str = Header(default=""),
+    secret: str = Query(default=""),
+) -> dict[str, str]:
+    provided = x_admin_secret or secret
+    configured_secret = get_secret_key()
+    if not provided or not hmac.compare_digest(provided, configured_secret):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    try:
+        from app.db.manage_db import run_migrations
+        run_migrations()
+    except Exception:
+        from app.db.database import Base, engine
+        Base.metadata.create_all(bind=engine)
+
+    from app.db.seed import seed_demo_data
+    seed_demo_data(db)
+    return {"status": "Database tables created and demo fixtures seeded successfully"}
 
 
 @app.get("/api/v1/runs", response_model=list[RunResponse])
