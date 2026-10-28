@@ -13,6 +13,8 @@ def resolve_database_url() -> str:
         os.getenv("PATCHPATH_DATABASE_URL")
         or os.getenv("POSTGRES_URL")
         or os.getenv("DATABASE_URL")
+        or os.getenv("STORAGE_URL")
+        or os.getenv("STORAGE_POSTGRES_URL")
     )
     if is_production():
         if not url:
