@@ -16,9 +16,10 @@ function ModalFrame({ title, kicker, onClose, children, size = "normal" }: { tit
   </div>;
 }
 
-export function AuthModal({ onClose, onDemo, onLogin, onRegister, busy, error }: {
+export function AuthModal({ onClose, onDemo, onLogin, onRegister, busy, error, demoLoginEnabled = true }: {
   onClose: () => void; onDemo: () => void; onLogin: (email: string, password: string) => void;
   onRegister: (email: string, name: string, password: string, department: string) => void; busy: boolean; error: string;
+  demoLoginEnabled?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -41,15 +42,15 @@ export function AuthModal({ onClose, onDemo, onLogin, onRegister, busy, error }:
       <button className="button button-ink full-button" disabled={busy}>{busy ? "Working…" : creating ? "Create account" : <>Sign in <LogIn size={15} /></>}</button>
     </form>
     <div className="modal-divider"><span>OR</span></div>
-    <button className="demo-login-button" onClick={onDemo} disabled={busy}><ShieldCheck size={16} /><span><strong>One-click demo login</strong><small>Open the seeded judge account</small></span><ArrowRight size={16} /></button>
+    <button className="demo-login-button" onClick={onDemo} disabled={busy}><ShieldCheck size={16} /><span><strong>{demoLoginEnabled ? "One-click demo login" : "One-click demo login (Disabled)"}</strong><small>{demoLoginEnabled ? "Open the seeded judge account" : "Disabled in production; register an account above"}</small></span><ArrowRight size={16} /></button>
     <button className="modal-text-button" onClick={() => setCreating((value) => !value)}>{creating ? "Already have an account? Sign in" : "New here? Create a free account"}</button>
   </ModalFrame>;
 }
 
-export function AuthPage({ onReturn, onDemo, onLogin, onRegister, busy, error, initialCreating = false }: {
+export function AuthPage({ onReturn, onDemo, onLogin, onRegister, busy, error, initialCreating = false, demoLoginEnabled = true }: {
   onReturn: () => void; onDemo: () => void; onLogin: (email: string, password: string) => void;
   onRegister: (email: string, name: string, password: string, department: string) => void;
-  busy: boolean; error: string; initialCreating?: boolean;
+  busy: boolean; error: string; initialCreating?: boolean; demoLoginEnabled?: boolean;
 }) {
   const [creating, setCreating] = useState(initialCreating);
   const [name, setName] = useState("");
@@ -77,7 +78,7 @@ export function AuthPage({ onReturn, onDemo, onLogin, onRegister, busy, error, i
       <section className="auth-page-card" aria-labelledby="auth-page-title">
         <span className="mini-label">{creating ? "CREATE A LOCAL ACCOUNT" : "WELCOME BACK"}</span>
         <h2 id="auth-page-title">{creating ? "Create your account" : "Sign in"}</h2>
-        <p className="auth-page-intro">{creating ? "Your account saves analysis runs to this local project database." : "Sign in to open your saved analyses and simulation logs."}</p>
+        <p className="auth-page-intro">{creating ? "Your account saves analysis runs to your durable database." : "Sign in to open your saved analyses and simulation logs."}</p>
         <form className="stacked-form" onSubmit={submit}>
           {creating && <label>Full name<input required value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label>}
           <label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
@@ -87,11 +88,11 @@ export function AuthPage({ onReturn, onDemo, onLogin, onRegister, busy, error, i
           <button className="button button-ink full-button" disabled={busy}>{busy ? "Working…" : creating ? "Create account" : <>Sign in <LogIn size={15} /></>}</button>
         </form>
         <div className="modal-divider"><span>OR</span></div>
-        <button className="demo-login-button" onClick={onDemo} disabled={busy}><ShieldCheck size={16} /><span><strong>Continue with the demo account</strong><small>Open the seeded local examples</small></span><ArrowRight size={16} /></button>
+        <button className="demo-login-button" onClick={onDemo} disabled={busy}><ShieldCheck size={16} /><span><strong>{demoLoginEnabled ? "Continue with the demo account" : "One-click demo login (Disabled)"}</strong><small>{demoLoginEnabled ? "Open the seeded local examples" : "Disabled in production; register a personal account"}</small></span><ArrowRight size={16} /></button>
         <button className="modal-text-button" onClick={() => setCreating((value) => !value)}>{creating ? "Already have an account? Sign in" : "New here? Create an account"}</button>
       </section>
     </div>
-    <footer className="auth-page-footer">LOCAL WORKSPACE · PASSWORDS ARE HASHED · SESSION COOKIE IS HTTPONLY</footer>
+    <footer className="auth-page-footer">SECURE AUTHENTICATION · PASSWORDS ARE HASHED · SESSION COOKIE IS HTTPONLY</footer>
   </main>;
 }
 

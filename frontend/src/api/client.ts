@@ -4,7 +4,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: "include" });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
@@ -18,7 +18,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  health: () => request<{ status: string }>("/api/v1/health"),
+  health: () => request<{ status: string; service: string }>("/api/v1/health"),
+  authConfig: () => request<{ demo_login_enabled: boolean; environment: string; cookie_secure: boolean }>("/api/v1/auth/config"),
   demo: (mode: string) => request<AnalysisRun>(`/api/v1/demos/${mode}`),
   demoLogin: async () => {
     const session = await request<AuthSession>("/api/v1/auth/demo-login", { method: "POST" });
@@ -36,18 +37,36 @@ export const api = {
   me: () => request<User>("/api/v1/auth/me"),
   runs: () => request<AnalysisRun[]>("/api/v1/runs"),
   analyze: (title: string, raw_input: string, department_lens: string, analysis_type: "repository" | "circuit" | "truss" | "beam" | "idea", repository_files?: Record<string, string>) => request<AnalysisRun>("/api/v1/upskiller/analyze", { method: "POST", body: JSON.stringify({ title, raw_input, department_lens, analysis_type, ...(repository_files ? { repository_files } : {}) }) }),
-  simulate: (runId: string, plan_id: string) => request<{ execution_id: string; stream_url: string; status: string }>(`/api/v1/simulate/${runId}`, { method: "POST", body: JSON.stringify({ plan_id }) }),
+  latestSimulation: (runId: string) => request<{ execution_id?: string; status: string; result?: Record<string, unknown>; error?: string; logs: ProgressEvent[] }>(`/api/v1/runs/${runId}/latest-simulation`),
+  simulationStatus: (executionId: string) => request<{ execution_id: string; status: string; result?: Record<string, unknown>; error?: string; logs: ProgressEvent[] }>(`/api/v1/simulations/${executionId}`),
 };
 
-export async function streamExecution(
-  executionId: string,
+export async function streamSimulation(
+  runId: string,
+  planId: string,
   onProgress: (event: ProgressEvent) => void,
   onComplete: (result: Record<string, unknown>) => void,
   signal?: AbortSignal,
 ) {
-  const headers = new Headers({ Accept: "text/event-stream" });
-  const response = await fetch(`${API_BASE}/api/v1/stream/${executionId}`, { headers, signal, credentials: "include" });
-  if (!response.ok || !response.body) throw new Error("Could not open the progress stream.");
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  });
+  const response = await fetch(`${API_BASE}/api/v1/simulate/${runId}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ plan_id: planId }),
+    signal,
+    credentials: "include",
+  });
+  if (!response.ok || !response.body) {
+    let message = `Simulation request failed (${response.status})`;
+    try {
+      const err = await response.json();
+      message = typeof err.detail === "string" ? err.detail : message;
+    } catch { /* use fallback */ }
+    throw new Error(message);
+  }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -62,10 +81,13 @@ export async function streamExecution(
       const eventName = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
       const dataLine = block.split("\n").find((line) => line.startsWith("data:"));
       if (!dataLine) continue;
-      const data = JSON.parse(dataLine.slice(5).trim());
-      if (eventName === "progress") onProgress(data as ProgressEvent);
-      if (eventName === "complete") onComplete(data as Record<string, unknown>);
+      try {
+        const data = JSON.parse(dataLine.slice(5).trim());
+        if (eventName === "progress") onProgress(data as ProgressEvent);
+        if (eventName === "complete") onComplete(data as Record<string, unknown>);
+      } catch {
+        /* skip invalid json in stream */
+      }
     }
   }
 }
-

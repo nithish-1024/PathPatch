@@ -4,10 +4,12 @@ __pycache__/
 .venv/
 .env
 .vercel/
+.vercel_python_packages/
 frontend/.env.local
 backend/patchpath.db
 backend/patchpath.db-*
+*.db
+*.db-*
 frontend/node_modules/
 frontend/dist/
 .DS_Store
-

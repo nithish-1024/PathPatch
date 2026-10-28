@@ -76,3 +76,11 @@ class SandboxExecutionLog(Base):
 
     execution: Mapped[SimulationExecution] = relationship(back_populates="logs")
 
+
+
+class RateLimitRecord(Base):
+    __tablename__ = "rate_limit_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    key: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True, nullable=False)

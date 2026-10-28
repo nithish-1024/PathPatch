@@ -11,7 +11,7 @@ import ModeGuide from "./components/layout/ModeGuide";
 import LayerInspector from "./components/layout/LayerInspector";
 import Deferred3DViewport from "./scenes/Deferred3DViewport";
 import { AuthPage, HistoryDrawer, IdeaAndRepoUpskillerModal, PatchDiffModal } from "./components/modals/Overlays";
-import { api, streamExecution } from "./api/client";
+import { api, streamSimulation } from "./api/client";
 import type { AnalysisRun, CandidatePlan, Mode, ProgressEvent, User, ViewLayer } from "./types/patchpath";
 
 const modes: Mode[] = ["cs_repo", "ece_circuit", "civil_mech", "mechanical_beam", "custom_upskiller"];
@@ -39,6 +39,7 @@ export default function App() {
   const [pageError, setPageError] = useState("");
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [notice, setNotice] = useState("");
+  const [demoLoginEnabled, setDemoLoginEnabled] = useState(true);
   const simulationAbort = useRef<AbortController | null>(null);
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
@@ -71,6 +72,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthPage) loadDemo("cs_repo");
     api.me().then(setUser).catch(() => setUser(null));
+    api.authConfig().then((cfg) => setDemoLoginEnabled(cfg.demo_login_enabled)).catch(() => {});
   }, [loadDemo, isAuthPage]);
 
   useEffect(() => {
@@ -101,6 +103,10 @@ export default function App() {
   };
 
   const handleDemoLogin = async () => {
+    if (!demoLoginEnabled) {
+      setAuthError("One-click demo login is disabled in production. Please register your own account.");
+      return;
+    }
     setAuthBusy(true); setAuthError("");
     try { await afterAuth(await api.demoLogin()); }
     catch (error) { setAuthError(error instanceof Error ? error.message : "Demo login failed."); }
@@ -149,12 +155,19 @@ export default function App() {
     catch (error) { setPageError(error instanceof Error ? error.message : "Could not end the session."); }
     setUser(null);
     setRuns([]);
+    setProgress([]);
     setNotice("You have signed out.");
   };
 
-  const handleSelectRun = (selected: AnalysisRun) => {
+  const handleSelectRun = async (selected: AnalysisRun) => {
     setRun(selected); setMode(selected.mode); setSelectedPlanId(selected.selected_plan_id || "plan_b");
     setLayer("overview"); setHistoryOpen(false); setProgress([]);
+    try {
+      const sim = await api.latestSimulation(selected.id);
+      if (sim.logs && sim.logs.length > 0) {
+        setProgress(sim.logs.sort((a, b) => a.sequence - b.sequence));
+      }
+    } catch { /* ignore if history recovery fails */ }
   };
 
   const handleSimulation = async () => {
@@ -164,14 +177,16 @@ export default function App() {
     simulationAbort.current?.abort();
     const controller = new AbortController(); simulationAbort.current = controller;
     try {
-      const job = await api.simulate(run.id, selectedPlan.id);
       setLayer("logs");
-      await streamExecution(job.execution_id,
+      await streamSimulation(
+        run.id,
+        selectedPlan.id,
         (event) => setProgress((items) => [...items.filter((item) => item.sequence !== event.sequence), event].sort((a, b) => a.sequence - b.sequence)),
         (result) => {
           setSimulationBusy(false);
           setNotice(result.status === "completed" ? "Simulation finished. Review the evidence limits before acting." : "Simulation ended; review the run log.");
-        }, controller.signal,
+        },
+        controller.signal,
       );
       setSimulationBusy(false);
     } catch (error) {
@@ -186,7 +201,7 @@ export default function App() {
     document.getElementById("studio")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
 
-  if (isAuthPage) return <AuthPage key={pathname} initialCreating={pathname === "/register"} onReturn={() => navigate("/")} onDemo={handleDemoLogin} onLogin={handleLogin} onRegister={handleRegister} busy={authBusy} error={authError} />;
+  if (isAuthPage) return <AuthPage key={pathname} initialCreating={pathname === "/register"} onReturn={() => navigate("/")} onDemo={handleDemoLogin} onLogin={handleLogin} onRegister={handleRegister} busy={authBusy} error={authError} demoLoginEnabled={demoLoginEnabled} />;
 
   if (!run || !selectedPlan) return <main className="boot-screen"><div className="boot-mark">P</div><p>{pageError || "Preparing your first specimen…"}</p>{pageError && <button className="button button-outline" onClick={() => loadDemo(mode)}>Try again</button>}</main>;
 

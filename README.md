@@ -58,9 +58,31 @@ See [LEARNING_AND_AGENT_PLAN.md](LEARNING_AND_AGENT_PLAN.md) for the phase plan,
 - **Your idea:** enter an idea to get a deterministic, keyword-based architecture learning template. It is not an LLM-generated or validated design.
 - Use **Overview** for the inputs and key values, **Topology** for parts, **Risk / Stress / Thermal** for findings and assumptions, **Flow** for connections, **Run log** for the rule-based teaching simulation, and **Patch notes** for the selected option and its evidence/risks.
 
-## Local data
+## Local data and schema management
 
-The default local SQLite database is `backend/patchpath.db` (when the backend is started from the `backend` directory as shown above). Open it with a SQLite viewer such as DB Browser for SQLite. Analysis runs and demo-user records are stored there. Use **Runs** in the app to review runs saved to your signed-in account.
+The default local SQLite database is `backend/patchpath.db` (when the backend is started from the `backend` directory as shown above).
+
+To apply versioned database migrations:
+```powershell
+python backend/app/db/manage_db.py migrate
+```
+
+To seed the idempotent public specimen fixtures:
+```powershell
+python backend/app/db/manage_db.py seed
+```
+
+Analysis runs and user records are stored in the database. Use **Runs** in the app to review runs saved to your signed-in account.
+
+## Production deployment (Vercel & Neon)
+
+PatchPath is configured for single-project deployment on Vercel with Neon PostgreSQL:
+- **Root configuration:** `vercel.json` configures the static Vite build (`frontend/dist`) and FastAPI Serverless Function entrypoint (`api/index.py`).
+- **Python runtime:** Pinned to Python 3.12 via `.python-version` with psycopg 3 PostgreSQL driver.
+- **Durable database:** Neon Serverless PostgreSQL with connection pooling (`PATCHPATH_DATABASE_URL` or `POSTGRES_URL`).
+- **Security:** Strict origin/CSRF checks, bounded durable rate limiting, and HttpOnly/SameSite=Lax cookies with Secure flag enforced over HTTPS.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed step-by-step setup, environment variable configuration, preview-first deployment, rollback procedures, and observability.
 
 ## Evidence limits
 

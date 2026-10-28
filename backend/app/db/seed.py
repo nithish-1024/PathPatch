@@ -77,3 +77,13 @@ def seed_demo_data(db: Session) -> None:
         ))
     db.commit()
 
+
+
+if __name__ == "__main__":
+    from app.db.database import SessionLocal
+    db_session = SessionLocal()
+    try:
+        seed_demo_data(db_session)
+        print("Demo data seeded successfully.")
+    finally:
+        db_session.close()
