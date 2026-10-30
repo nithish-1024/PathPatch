@@ -142,6 +142,7 @@ def analyze_truss(load_total_kn: float = 180.0) -> dict:
             "evidence": [f"Target buckling ratio after change: {plan_a['target']['buckling_ratio']} (Euler model)."],
             "risks": ["Connection shear, fatigue, lateral restraint, and constructability are outside this solver."],
             "evidence_status": "calculated in the stated 2D ideal-truss model", "estimated_scope": "one member; connection not checked",
+            "scenario": {"target_buckling_ratio": plan_a["target"]["buckling_ratio"], "max_stress_mpa": plan_a["max_stress_mpa"], "max_displacement_mm": plan_a["max_displacement_mm"]},
         },
         {
             "id": "plan_b", "label": "B", "name": "Retrofit target with HSS 100 × 100 × 6", "recommended": True,
@@ -154,6 +155,7 @@ def analyze_truss(load_total_kn: float = 180.0) -> dict:
             ],
             "risks": ["The model omits gusset plates, bolt group checks, code factors, buckling imperfections, and 3D out-of-plane stability."],
             "evidence_status": "calculated in the stated 2D ideal-truss model; not a design approval", "estimated_scope": "one member section; connections require separate design",
+            "scenario": {"target_buckling_ratio": plan_b["target"]["buckling_ratio"], "max_stress_mpa": plan_b["max_stress_mpa"], "max_displacement_mm": plan_b["max_displacement_mm"]},
         },
         {
             "id": "plan_c", "label": "C", "name": "Replace all members with the same HSS", "recommended": False,
@@ -162,6 +164,7 @@ def analyze_truss(load_total_kn: float = 180.0) -> dict:
             "evidence": [f"Maximum member stress: {plan_c['max_stress_mpa']} MPa."],
             "risks": ["Weight, connections, fabrication, fatigue, and boundary conditions need independent checks."],
             "evidence_status": "calculated in the stated 2D ideal-truss model", "estimated_scope": "full truss member replacement",
+            "scenario": {"target_buckling_ratio": plan_c["target"]["buckling_ratio"], "max_stress_mpa": plan_c["max_stress_mpa"], "max_displacement_mm": plan_c["max_displacement_mm"]},
         },
     ]
     edges = [{"source": a, "target": b, "label": "axial member", "status": "fault" if label == target_label else "stable"} for a, b, label in baseline["members"]]
@@ -181,4 +184,3 @@ def analyze_truss(load_total_kn: float = 180.0) -> dict:
         "system_graph": {"nodes": nodes, "edges": edges, "faults": [target_label], "patches": ["replace target member section and re-solve"], "evidence_note": "Numerical result for this idealized 2D fixture; no connection or code checks."},
         "candidate_plans": plans,
     }
-

@@ -1,5 +1,6 @@
 import { Line, RoundedBox, Text } from "@react-three/drei";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { BreadboardComponent, BreadboardModel, CandidatePlan, ViewLayer } from "../types/patchpath";
@@ -49,7 +50,7 @@ function BreadboardBase() {
   </group>;
 }
 
-function Part({ component, plan, layer, template }: { component: BreadboardComponent; plan: CandidatePlan; layer: ViewLayer; template: string }) {
+function Part({ component, plan, layer, template, powered }: { component: BreadboardComponent; plan: CandidatePlan; layer: ViewLayer; template: string; powered: boolean }) {
   const [x, z] = component.position;
   const regulatorLabel = component.id === "u1" && plan.id === "plan_b" && component.kind === "regulator";
   const thermalFocus = layer === "thermal" && ((template === "regulator-demo" && component.kind === "regulator") || (template === "led-series" && component.kind === "resistor"));
@@ -76,7 +77,7 @@ function Part({ component, plan, layer, template }: { component: BreadboardCompo
       {[-0.34, 0.34].map((lead) => <mesh key={lead} position={[lead, 0, 0]}><cylinderGeometry args={[0.013, 0.013, 0.3, 8]} /><meshStandardMaterial color="#b7a97e" metalness={0.78} roughness={0.3} /></mesh>)}
     </>}
     {component.kind === "led" && <>
-      <mesh position={[0, 0.12, 0]}><sphereGeometry args={[0.13, 22, 18]} /><meshStandardMaterial color="#dc6860" emissive="#7b211e" emissiveIntensity={0.4} roughness={0.25} transparent opacity={0.92} /></mesh>
+      <mesh position={[0, 0.12, 0]}><sphereGeometry args={[0.13, 22, 18]} /><meshStandardMaterial color={powered ? "#8ff0a6" : "#dc6860"} emissive={powered ? "#36df68" : "#7b211e"} emissiveIntensity={powered ? 2.1 : 0.4} roughness={0.25} transparent opacity={0.92} /></mesh>
       {[-0.045, 0.045].map((pin) => <mesh key={pin} position={[pin, -0.07, 0]}><cylinderGeometry args={[0.012, 0.012, 0.3, 8]} /><meshStandardMaterial color="#b7a97e" metalness={0.7} /></mesh>)}
     </>}
     {component.kind === "capacitor" && <>
@@ -97,6 +98,20 @@ function Part({ component, plan, layer, template }: { component: BreadboardCompo
   </group>;
 }
 
+function FlowParticle({ points, offset }: { points: [number, number, number][]; offset: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!ref.current || points.length < 2) return;
+    const progress = (clock.elapsedTime * 0.24 + offset) % 1;
+    const segmentProgress = progress * (points.length - 1);
+    const segment = Math.min(points.length - 2, Math.floor(segmentProgress));
+    const local = segmentProgress - segment;
+    const from = points[segment]; const to = points[segment + 1];
+    ref.current.position.set(from[0] + (to[0] - from[0]) * local, from[1] + (to[1] - from[1]) * local, from[2] + (to[2] - from[2]) * local);
+  });
+  return <mesh ref={ref}><sphereGeometry args={[0.027, 8, 8]} /><meshBasicMaterial color="#b8ffd0" toneMapped={false} /></mesh>;
+}
+
 const fallbackBoard: BreadboardModel = {
   template: "empty",
   evidence_note: "This run does not include a breadboard layout.",
@@ -104,7 +119,7 @@ const fallbackBoard: BreadboardModel = {
   wires: [],
 };
 
-export default function PcbSpecimenScene({ board, plan, layer }: { board?: BreadboardModel; plan: CandidatePlan; layer: ViewLayer }) {
+export default function PcbSpecimenScene({ board, plan, layer, powered = false, reducedMotion = false }: { board?: BreadboardModel; plan: CandidatePlan; layer: ViewLayer; powered?: boolean; reducedMotion?: boolean }) {
   const model = board ?? fallbackBoard;
   const pathPoints = (points: [number, number][]) => points.map(([x, z], index) => [x, 0.11 + (index % 2 ? 0.055 : 0.025), z] as [number, number, number]);
   const wireOpacity = layer === "topology" || layer === "flow" ? 1 : 0.86;
@@ -112,11 +127,12 @@ export default function PcbSpecimenScene({ board, plan, layer }: { board?: Bread
     <BreadboardBase />
     {model.wires.map((wire) => <group key={wire.id}>
       <Line points={pathPoints(wire.points)} color={wire.color} lineWidth={layer === "flow" ? 3.2 : 2.4} transparent opacity={wireOpacity} />
+      {powered && !reducedMotion && pathPoints(wire.points).length > 1 && <FlowParticle points={pathPoints(wire.points)} offset={(wire.id.length % 5) / 5} />}
       {layer === "flow" && <mesh position={[wire.points[Math.floor(wire.points.length / 2)][0], 0.2, wire.points[Math.floor(wire.points.length / 2)][1]]}>
         <sphereGeometry args={[0.045, 12, 10]} /><meshBasicMaterial color={wire.color} />
       </mesh>}
     </group>)}
-    {model.components.map((component) => <Part key={component.id} component={component} plan={plan} layer={layer} template={model.template} />)}
+    {model.components.map((component) => <Part key={component.id} component={component} plan={plan} layer={layer} template={model.template} powered={powered && component.kind === "led"} />)}
     <Text position={[0, 1.25, -1.95]} fontSize={0.12} color="#f5eee0" anchorX="center">{model.template === "regulator-demo" ? "12 V → 5 V · REGULATOR SAMPLE" : model.template === "empty" ? "NO BREADBOARD LAYOUT IN THIS RUN" : "USER CIRCUIT · STARTER WIRING DRAFT"}</Text>
     <Text position={[0, 0.04, 2.0]} fontSize={0.07} color="#f5eee0" anchorX="center">{layer === "flow" ? "FOLLOW THE COLORED PATHS" : layer === "thermal" ? "HIGHLIGHTED PARTS NEED REVIEW" : "A–E  /  CENTER TRENCH  /  F–J"}</Text>
   </group>;

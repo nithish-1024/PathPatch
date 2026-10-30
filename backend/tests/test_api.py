@@ -61,6 +61,8 @@ def test_public_demos_and_health(test_db_setup):
             run = demo_resp.json()
             assert run["mode"] == mode
             assert run["system_graph_json"]["nodes"]
+            assert 0 <= run["analysis_json"]["health_score"]["score"] <= 100
+            assert run["analysis_json"]["health_score"]["factors"]
 
 
 def test_auth_persistence_ownership_and_simulation_stream(test_db_setup):
