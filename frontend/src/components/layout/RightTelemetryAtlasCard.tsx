@@ -31,6 +31,7 @@ export default function RightTelemetryAtlasCard({ run, plan, onRun, busy, onDiff
     <div className="telemetry-kicker"><span>{run.mode.replaceAll("_", " ").toUpperCase()} / FIELD CARD</span><span className={`status-dot ${metric.severity}`} /></div>
     <div className="telemetry-title-row"><div><div className="mini-label">CURRENT SPECIMEN</div><h2>{run.title}</h2></div><span className={`state-chip ${findings ? "chip-fault" : "chip-calm"}`}>{findings ? <ShieldAlert size={13} /> : <ShieldCheck size={13} />}{run.mode === "mechanical_beam" ? "TEACHING MODEL" : run.mode === "custom_upskiller" || run.analysis_json.breadboard?.template !== "regulator-demo" && run.mode === "ece_circuit" ? "DRAFT" : findings ? "REVIEW" : "DRAFT"}</span></div>
     <div className="metric-primary"><div><span className="mini-label">{metric.label}</span><strong>{metric.primary}</strong></div><span className="metric-tag">MODEL<br />VALUE</span></div>
+    {run.analysis_json.health_score && <details className="health-score"><summary><span><b>{run.analysis_json.health_score.score}</b><small>/ 100 · EDUCATIONAL HEALTH</small></span><span>How scored</span></summary><p>{run.analysis_json.health_score.method}</p><ul>{run.analysis_json.health_score.factors.map((factor) => <li key={factor}>{factor}</li>)}</ul></details>}
     <div className="fact-grid">
       <div><span>BLAST RADIUS</span><strong>{metric.blast}</strong></div>
       <div><span>VALIDATION</span><strong>{metric.signal}</strong></div>
@@ -46,4 +47,3 @@ export default function RightTelemetryAtlasCard({ run, plan, onRun, busy, onDiff
     <div className="run-label">RULE-BASED TEACHING SIMULATION · NO CODE OR HARDWARE EXECUTED</div>
   </aside>;
 }
-

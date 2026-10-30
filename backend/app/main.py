@@ -31,6 +31,7 @@ from app.db.seed import DEMO_EMAIL, DEMO_PASSWORD
 from app.engines.civil_truss_engine import analyze_truss
 from app.engines.cs_repo_engine import analyze_manifest, analyze_repository_files, fetch_github_package_json
 from app.engines.ece_circuit_engine import analyze_circuit_idea
+from app.engines.health_score import health_score
 from app.engines.mechanical_beam_engine import analyze_beam
 from app.engines.upskiller_engine import analyze_idea
 from app.schemas.contracts import AnalyzeRequest, AuthResponse, LoginRequest, RegisterRequest, RunResponse, SimulationRequest, UserResponse
@@ -85,6 +86,8 @@ def _auth_response(user: User, response: Response) -> AuthResponse:
 
 
 def _run_response(run: ProjectAnalysisRun) -> RunResponse:
+    analysis = dict(run.analysis_json or {})
+    analysis.setdefault("health_score", health_score(run.mode, analysis))
     return RunResponse(
         id=run.id,
         mode=run.mode,
@@ -94,7 +97,7 @@ def _run_response(run: ProjectAnalysisRun) -> RunResponse:
         system_graph_json=run.system_graph_json,
         candidate_plans_json=run.candidate_plans_json,
         upskilled_blueprint_json=run.upskilled_blueprint_json,
-        analysis_json=run.analysis_json or {},
+        analysis_json=analysis,
         created_at=run.created_at.isoformat(),
     )
 
@@ -322,7 +325,7 @@ def create_analysis(payload: AnalyzeRequest, request: Request, db: Session = Dep
         system_graph_json=result["system_graph"],
         candidate_plans_json=result["candidate_plans"],
         upskilled_blueprint_json=blueprint,
-        analysis_json=result,
+        analysis_json={**result, "health_score": health_score(mode, result)},
     )
     db.add(row)
     db.commit()

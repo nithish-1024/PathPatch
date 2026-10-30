@@ -73,7 +73,7 @@ export interface AnalysisRun {
   system_graph_json: SystemGraph;
   candidate_plans_json: CandidatePlan[];
   upskilled_blueprint_json?: Record<string, unknown> | null;
-  analysis_json: Record<string, any>;
+  analysis_json: Record<string, any> & { health_score?: { score: number; label: string; factors: string[]; method: string } };
   created_at: string;
 }
 
@@ -96,4 +96,3 @@ export interface ProgressEvent {
   message: string;
   duration_ms: number;
 }
-

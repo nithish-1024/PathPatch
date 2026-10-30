@@ -221,11 +221,33 @@ function patchForRun(run: AnalysisRun, plan: CandidatePlan): { before: string; a
 
 export function PatchDiffModal({ run, plan, onClose }: { run: AnalysisRun; plan: CandidatePlan; onClose: () => void }) {
   const diff = patchForRun(run, plan);
+  const metrics = run.analysis_json.metrics ?? {};
+  const findings = run.analysis_json.findings ?? [];
+  const comparisons: { label: string; before: string; after: string; improvement?: number; note: string }[] = [];
+  const addComparison = (label: string, before: unknown, after: unknown, unit: string, note: string) => {
+    const beforeValue = typeof before === "number" && Number.isFinite(before) ? before : undefined;
+    const afterValue = typeof after === "number" && Number.isFinite(after) ? after : undefined;
+    comparisons.push({ label, before: beforeValue !== undefined ? `${beforeValue} ${unit}` : "Unavailable", after: afterValue !== undefined ? `${afterValue} ${unit}` : "Unavailable", improvement: beforeValue !== undefined && afterValue !== undefined && beforeValue > 0 ? (beforeValue - afterValue) / beforeValue * 100 : undefined, note });
+  };
+  if (run.mode === "cs_repo") addComparison("Matching vulnerabilities", findings.length, plan.id === "plan_b" ? 0 : findings.length, "finding(s)", "Plan B proposes a patched Lodash floor; the expected count follows bundled advisory matching and does not establish whether affected code paths are used.");
+  else if (run.mode === "ece_circuit" && metrics.linear_loss_w !== undefined) {
+    const proposed = plan.id === "plan_b" ? metrics.switcher_loss_estimate_w : undefined;
+    addComparison("Regulator loss estimate", metrics.linear_loss_w, proposed, "W", "Baseline is a linear model. Proposed value uses the stated typical-efficiency assumption; temperature after the change was not calculated.");
+    comparisons.push({ label: "Temperature", before: metrics.linear_junction_estimate_c !== undefined ? `${metrics.linear_junction_estimate_c} °C estimate` : "Unavailable", after: "Unavailable", note: "No post-plan thermal resistance, board layout, or temperature measurement is available." });
+  } else if (run.mode === "ece_circuit") addComparison("LED current estimate", metrics.current_ma, metrics.current_ma, "mA", "No alternative electrical scenario is calculated by the selected plan.");
+  else if (run.mode === "civil_mech") {
+    addComparison("Target Euler ratio", metrics.baseline_target_buckling_ratio, plan.scenario?.target_buckling_ratio, "ratio", "Idealized 2D axial-truss re-solve under the same load; connection and code checks are not included.");
+    addComparison("Maximum stress", metrics.baseline_max_stress_mpa, plan.scenario?.max_stress_mpa, "MPa", "Idealized 2D axial-truss re-solve under the same load; this is not a strength approval.");
+    addComparison("Maximum displacement", metrics.baseline_max_displacement_mm, plan.scenario?.max_displacement_mm, "mm", "Idealized 2D axial-truss re-solve under the same load.");
+  } else if (run.mode === "mechanical_beam") {
+    addComparison("Bending stress estimate", metrics.max_bending_stress_mpa, plan.scenario?.max_bending_stress_mpa, "MPa", "Closed-form estimate using the selected plan scenario.");
+    addComparison("Center deflection estimate", metrics.max_deflection_mm, plan.scenario?.max_deflection_mm, "mm", "Closed-form estimate using the selected plan scenario.");
+  } else comparisons.push({ label: "Engineering measurement", before: "Unavailable", after: "Unavailable", note: "This planning mode has no physical analysis measurements." });
   return <ModalFrame title="Review the proposed change" kicker="PATCH NOTES / NOT AUTO-APPLIED" onClose={onClose} size="wide">
     <div className="diff-disclaimer"><FileDiff size={16} /><span>{diff.label}</span></div>
     <div className="diff-columns"><section><div className="diff-header diff-before">CURRENT INPUT <span>BEFORE</span></div><pre>{diff.before}</pre></section><section><div className="diff-header diff-after">PROPOSED PATH <span>AFTER</span></div><pre>{diff.after}</pre></section></div>
+    <section className="comparison-panel"><div className="mini-label">COMPARISON · SELECTED PLAN</div><div className="comparison-grid"><strong>Measure</strong><strong>Original</strong><strong>Selected plan</strong><strong>Change</strong>{comparisons.map((item) => <div className="comparison-row" key={item.label}><b>{item.label}</b><span>{item.before}</span><span>{item.after}</span><span>{item.improvement === undefined ? "Not calculated" : item.improvement > 0 ? `${item.improvement.toFixed(1)}% reduction` : item.improvement < 0 ? `${Math.abs(item.improvement).toFixed(1)}% increase` : "No change"}</span><small>{item.note}</small></div>)}</div></section>
     <div className="modal-bottom-note"><CircleHelp size={15} />This is a proposal for learning. It has not changed a repository, board, or structure.</div>
     <button className="button button-outline" onClick={onClose}>Close review</button>
   </ModalFrame>;
 }
-
