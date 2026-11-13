@@ -1,6 +1,7 @@
 import {
   Download,
   FolderOpen,
+  Globe,
   Layers,
   Pause,
   Play,
@@ -24,6 +25,7 @@ interface TopCommandRibbonProps {
   onSelectPreset: (presetId: string) => void;
   onClear: () => void;
   onExportNetlist: () => void;
+  onOpenCommunityModal?: () => void;
 }
 
 const WIRE_COLORS = [
@@ -48,6 +50,7 @@ export default function TopCommandRibbon({
   onSelectPreset,
   onClear,
   onExportNetlist,
+  onOpenCommunityModal,
 }: TopCommandRibbonProps) {
   return (
     <header className="eda-command-ribbon" role="toolbar" aria-label="EDA Command Ribbon">
@@ -56,7 +59,7 @@ export default function TopCommandRibbon({
         <div className="ribbon-brand-tag">
           <Zap size={15} className="brand-bolt" />
           <span className="brand-name">UNIVERSAL EDA</span>
-          <span className="brand-sub">Tinkercad · Multisim · KiCad · Vivado</span>
+          <span className="brand-sub">Tinkercad · Multisim · OpenCircuits · KiCad</span>
         </div>
 
         {/* Run / Stop Simulation Button */}
@@ -153,6 +156,19 @@ export default function TopCommandRibbon({
             ))}
           </select>
         </div>
+
+        {/* Community Circuits Hub Modal Trigger */}
+        {onOpenCommunityModal && (
+          <button
+            type="button"
+            className="ribbon-btn ribbon-btn-community"
+            onClick={onOpenCommunityModal}
+            title="Open OurCircuits / OpenCircuits Community Repository & Discussions"
+          >
+            <Globe size={13} />
+            <span>Community Hub</span>
+          </button>
+        )}
 
         {/* Export Netlist */}
         <button

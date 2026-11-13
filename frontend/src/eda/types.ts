@@ -82,7 +82,7 @@ export interface EdaWire {
 }
 
 export type ViewMode = "breadboard" | "schematic" | "pcb";
-export type InstrumentTab = "oscilloscope" | "logic_analyzer" | "multimeter" | "netlist";
+export type InstrumentTab = "oscilloscope" | "bode_analyzer" | "logic_analyzer" | "multimeter" | "netlist";
 
 export interface OscilloscopeState {
   timeDiv: number; // seconds per div (e.g. 0.001 = 1ms/div)
@@ -116,13 +116,35 @@ export interface MultimeterState {
   leadBlackNode: string | null;
 }
 
+export interface CircuitFaultLocation {
+  componentId: string;
+  componentDesignator: string;
+  pinId?: string;
+  pinName?: string;
+  netId?: string;
+  nodePotentialV?: number;
+}
+
 export interface CircuitDiagnostic {
   id: string;
   severity: "critical" | "warning" | "info";
   title: string;
   componentId?: string;
-  whyThisHappened: string;
+  faultLocation?: CircuitFaultLocation;
+  whereItWentWrong: string;
+  whyItWentWrong: string;
+  whyThisHappened: string; // for backward compatibility
+  firstPrinciplesProof?: string;
   recommendation: string;
+}
+
+export interface BodePlotData {
+  frequencies: number[]; // Hz
+  gainDb: number[];     // dB
+  phaseDeg: number[];   // degrees
+  cutoffFreqHz?: number;
+  resonanceFreqHz?: number;
+  qFactor?: number;
 }
 
 export interface SimulationResult {
@@ -135,8 +157,34 @@ export interface SimulationResult {
     ch1: number[];
     ch2: number[];
   };
+  bodeData?: BodePlotData;
   logicWaveforms: Record<string, (0 | 1)[]>;
   thermalMap: Record<string, number>;
   activeAlerts: string[];
   diagnostics: CircuitDiagnostic[];
+}
+
+export interface CommunityCircuit {
+  id: string;
+  title: string;
+  author: string;
+  authorAvatar?: string;
+  verified: boolean;
+  category: "analog" | "digital" | "power" | "audio" | "filter";
+  description: string;
+  rating: number; // 1-5 stars
+  starsCount: number;
+  forksCount: number;
+  commentsCount: number;
+  componentsCount: number;
+  wiresCount: number;
+  presetId: string;
+  tags: string[];
+  discussions: Array<{
+    id: string;
+    author: string;
+    role: "Student" | "TA" | "Professor" | "Engineer";
+    timestamp: string;
+    content: string;
+  }>;
 }

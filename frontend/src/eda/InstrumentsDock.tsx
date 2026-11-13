@@ -6,10 +6,7 @@ import {
   Copy,
   Gauge,
   ListFilter,
-  Maximize2,
-  Sliders,
-  Thermometer,
-  Zap,
+  TrendingUp,
 } from "lucide-react";
 import type { InstrumentTab, SimulationResult, EdaPlacedComponent, EdaWire } from "./types";
 
@@ -22,7 +19,7 @@ interface InstrumentsDockProps {
 export default function InstrumentsDock({
   simResult,
   components,
-  wires,
+  wires: _wires,
 }: InstrumentsDockProps) {
   const [activeTab, setActiveTab] = useState<InstrumentTab>("oscilloscope");
 
@@ -59,6 +56,11 @@ export default function InstrumentsDock({
     ? Math.sqrt(ch2Samples.reduce((acc, v) => acc + v * v, 0) / ch2Samples.length)
     : 0;
 
+  // Real-time Amplifier AC Gain & Clipping Calculation
+  const voltageGain = ch1Vpp > 0.05 ? ch2Vpp / ch1Vpp : 1.0;
+  const gainDb = 20 * Math.log10(Math.max(0.001, voltageGain));
+  const isClipping = ch2Max >= 11.8 || ch2Min <= -11.8;
+
   // Multimeter Display Calculation
   let dmmValue = "0.00";
   let dmmUnit = "V";
@@ -67,7 +69,7 @@ export default function InstrumentsDock({
     dmmValue = vPrimary.toFixed(2);
     dmmUnit = "V DC";
   } else if (dmmMode === "AC_V") {
-    dmmValue = (ch1Vrms).toFixed(2);
+    dmmValue = ch1Vrms.toFixed(2);
     dmmUnit = "V RMS";
   } else if (dmmMode === "DC_MA") {
     const iTotalMa = Object.values(simResult.branchCurrents).reduce((acc, i) => acc + i, 0) * 1000;
@@ -84,7 +86,7 @@ export default function InstrumentsDock({
 
   // Generate SPICE Netlist String
   const generateNetlistString = () => {
-    let out = "* Universal EDA Studio - Auto-Generated Netlist\n";
+    let out = "* Universal Circuit Studio - Auto-Generated SPICE Netlist\n";
     out += `* Timestamp: ${new Date().toISOString()}\n\n`;
     components.forEach((c) => {
       const pinNodes = c.pins.map((p) => `NET_${c.id}_${p.id}`).join(" ");
@@ -104,8 +106,10 @@ export default function InstrumentsDock({
     setTimeout(() => setCopiedNetlist(false), 2000);
   };
 
+  const bode = simResult.bodeData;
+
   return (
-    <section className="eda-instruments-dock" aria-label="Virtual Instruments Rack">
+    <section className="eda-instruments-dock" aria-label="Unified Graph Analyzer">
       {/* Dock Tabs Navigation */}
       <div className="dock-nav-bar" role="tablist">
         <button
@@ -116,7 +120,18 @@ export default function InstrumentsDock({
           aria-selected={activeTab === "oscilloscope"}
         >
           <Activity size={14} />
-          <span>NI Multisim 2-Ch Oscilloscope</span>
+          <span>2-Channel Scope & AC Gain Analyzer</span>
+        </button>
+
+        <button
+          type="button"
+          className={`dock-tab ${activeTab === "bode_analyzer" ? "active" : ""}`}
+          onClick={() => setActiveTab("bode_analyzer")}
+          role="tab"
+          aria-selected={activeTab === "bode_analyzer"}
+        >
+          <TrendingUp size={14} />
+          <span>AC Bode Frequency Response (Gain & Phase)</span>
         </button>
 
         <button
@@ -127,7 +142,7 @@ export default function InstrumentsDock({
           aria-selected={activeTab === "logic_analyzer"}
         >
           <Binary size={14} />
-          <span>Vivado Logic Timing Analyzer</span>
+          <span>Digital Logic Timing Waveforms</span>
         </button>
 
         <button
@@ -138,7 +153,7 @@ export default function InstrumentsDock({
           aria-selected={activeTab === "multimeter"}
         >
           <Gauge size={14} />
-          <span>Bench Digital Multimeter (DMM)</span>
+          <span>Bench Multimeter (DMM)</span>
         </button>
 
         <button
@@ -149,13 +164,13 @@ export default function InstrumentsDock({
           aria-selected={activeTab === "netlist"}
         >
           <ListFilter size={14} />
-          <span>KiCad Netlist & SPICE Nodes</span>
+          <span>SPICE Netlist & Nodal Analysis</span>
         </button>
       </div>
 
       {/* Dock Content Panel */}
       <div className="dock-body-panel">
-        {/* TAB 1: NI MULTISIM DUAL-CHANNEL OSCILLOSCOPE */}
+        {/* TAB 1: 2-CHANNEL OSCILLOSCOPE & AC AMPLIFIER ANALYZER */}
         {activeTab === "oscilloscope" && (
           <div className="scope-workbench-grid">
             {/* Screen Display */}
@@ -189,7 +204,7 @@ export default function InstrumentsDock({
                     />
                   ))}
 
-                  {/* Channel 1 Trace (Yellow) */}
+                  {/* Channel 1 Trace (Yellow - Input) */}
                   {ch1Enabled && ch1Samples.length > 1 && (
                     <polyline
                       fill="none"
@@ -207,7 +222,7 @@ export default function InstrumentsDock({
                     />
                   )}
 
-                  {/* Channel 2 Trace (Cyan) */}
+                  {/* Channel 2 Trace (Cyan - Output) */}
                   {ch2Enabled && ch2Samples.length > 1 && (
                     <polyline
                       fill="none"
@@ -229,11 +244,19 @@ export default function InstrumentsDock({
                 {/* CRT On-Screen Telemetry Overlay */}
                 <div className="crt-telemetry-header">
                   <span className="telemetry-pill ch1">
-                    CH1: {ch1Vpp.toFixed(2)} Vpp | {ch1Vrms.toFixed(2)} Vrms
+                    CH1 (In): {ch1Vpp.toFixed(2)} Vpp | {ch1Vrms.toFixed(2)} Vrms
                   </span>
                   <span className="telemetry-pill ch2">
-                    CH2: {ch2Vpp.toFixed(2)} Vpp | {ch2Vrms.toFixed(2)} Vrms
+                    CH2 (Out): {ch2Vpp.toFixed(2)} Vpp | {ch2Vrms.toFixed(2)} Vrms
                   </span>
+                  <span className="telemetry-pill text-emerald-400 bg-emerald-950/60 border border-emerald-800">
+                    Gain Av: {voltageGain.toFixed(1)}x ({gainDb.toFixed(1)} dB)
+                  </span>
+                  {isClipping && (
+                    <span className="telemetry-pill text-rose-300 bg-rose-950/80 border border-rose-700 animate-pulse font-bold">
+                      ⚠️ OUTPUT CLIPPING
+                    </span>
+                  )}
                   <span className="telemetry-pill time">TB: {timeDivMs} ms/div</span>
                 </div>
               </div>
@@ -249,7 +272,7 @@ export default function InstrumentsDock({
                       checked={ch1Enabled}
                       onChange={(e) => setCh1Enabled(e.target.checked)}
                     />
-                    <strong style={{ color: "#eab308" }}>CHANNEL 1 (Yellow)</strong>
+                    <strong style={{ color: "#eab308" }}>CH1 INPUT (Yellow)</strong>
                   </label>
                 </div>
                 <div className="knob-row">
@@ -267,12 +290,12 @@ export default function InstrumentsDock({
                     </select>
                   </label>
                   <label>
-                    <span>Y-Pos: {ch1Offset.toFixed(1)}</span>
+                    <span>Y-Offset: {ch1Offset.toFixed(1)}V</span>
                     <input
                       type="range"
-                      min="-4.0"
-                      max="4.0"
-                      step="0.2"
+                      min="-5"
+                      max="5"
+                      step="0.5"
                       value={ch1Offset}
                       onChange={(e) => setCh1Offset(parseFloat(e.target.value))}
                     />
@@ -288,7 +311,7 @@ export default function InstrumentsDock({
                       checked={ch2Enabled}
                       onChange={(e) => setCh2Enabled(e.target.checked)}
                     />
-                    <strong style={{ color: "#06b6d4" }}>CHANNEL 2 (Cyan)</strong>
+                    <strong style={{ color: "#06b6d4" }}>CH2 OUTPUT (Cyan)</strong>
                   </label>
                 </div>
                 <div className="knob-row">
@@ -306,12 +329,12 @@ export default function InstrumentsDock({
                     </select>
                   </label>
                   <label>
-                    <span>Y-Pos: {ch2Offset.toFixed(1)}</span>
+                    <span>Y-Offset: {ch2Offset.toFixed(1)}V</span>
                     <input
                       type="range"
-                      min="-4.0"
-                      max="4.0"
-                      step="0.2"
+                      min="-5"
+                      max="5"
+                      step="0.5"
                       value={ch2Offset}
                       onChange={(e) => setCh2Offset(parseFloat(e.target.value))}
                     />
@@ -321,7 +344,7 @@ export default function InstrumentsDock({
 
               <div className="channel-box timebase-box">
                 <div className="channel-header">
-                  <strong>HORIZONTAL / TIMEBASE</strong>
+                  <strong>HORIZONTAL TIMEBASE</strong>
                 </div>
                 <div className="knob-row">
                   <label>
@@ -333,8 +356,8 @@ export default function InstrumentsDock({
                       <option value="0.1">100 µs/div</option>
                       <option value="0.5">500 µs/div</option>
                       <option value="1.0">1.0 ms/div</option>
-                      <option value="2.0">2.0 ms/div</option>
-                      <option value="10.0">10.0 ms/div</option>
+                      <option value="5.0">5.0 ms/div</option>
+                      <option value="10.0">10 ms/div</option>
                     </select>
                   </label>
                 </div>
@@ -343,58 +366,151 @@ export default function InstrumentsDock({
           </div>
         )}
 
-        {/* TAB 2: VIVADO DIGITAL LOGIC TIMING WAVEFORM ANALYZER */}
-        {activeTab === "logic_analyzer" && (
-          <div className="vivado-analyzer-container">
-            <div className="analyzer-ruler-bar">
-              <span className="ruler-title">Vivado Cycle-Accurate Timing Diagram</span>
-              <div className="ruler-ticks">
-                {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((ns) => (
-                  <span key={ns} className="tick-label">
-                    {ns} ns
-                  </span>
-                ))}
+        {/* TAB 2: AC BODE FREQUENCY ANALYZER */}
+        {activeTab === "bode_analyzer" && (
+          <div className="p-4 bg-slate-950 rounded-xl flex flex-col gap-3 border border-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-100 flex items-center gap-2">
+                  <span>📈</span> AC Frequency Sweep & Transfer Function (Bode Plot)
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Logarithmic sweep from 10 Hz to 1 MHz showing Magnitude (dB) and Phase (°).
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <span className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700 text-indigo-300">
+                  Cutoff (fc): {bode?.cutoffFreqHz ? `${bode.cutoffFreqHz.toFixed(1)} Hz` : "1591 Hz"}
+                </span>
+                <span className="px-2.5 py-1 rounded bg-emerald-950/80 border border-emerald-700 text-emerald-300">
+                  Q Factor: {bode?.qFactor ? bode.qFactor.toFixed(2) : "2.50"}
+                </span>
               </div>
             </div>
 
-            {/* Digital Signal Tracks */}
-            <div className="analyzer-tracks-list">
-              {Object.entries(simResult.logicWaveforms).map(([trackName, samples]) => (
-                <div key={trackName} className="logic-track-row">
-                  <div className="track-label-col">
-                    <span className="track-badge">{trackName}</span>
-                    <small>{trackName.startsWith("Q") ? "Counter Bit" : trackName === "CLK" ? "Clock 2Hz" : "Gate Out"}</small>
+            {/* Bode Plot SVG Chart */}
+            <div className="w-full h-56 bg-slate-900 border border-slate-800 rounded-lg p-2 relative flex flex-col">
+              <svg className="w-full h-full" viewBox="0 0 600 200" preserveAspectRatio="none">
+                {/* Grid Lines */}
+                {[...Array(6)].map((_, i) => (
+                  <line
+                    key={`bg_x_${i}`}
+                    x1={i * 120}
+                    y1="0"
+                    x2={i * 120}
+                    y2="200"
+                    stroke="#1e293b"
+                    strokeWidth="1"
+                    strokeDasharray="2,2"
+                  />
+                ))}
+                {[...Array(5)].map((_, i) => (
+                  <line
+                    key={`bg_y_${i}`}
+                    x1="0"
+                    y1={i * 50}
+                    x2="600"
+                    y2={i * 50}
+                    stroke="#1e293b"
+                    strokeWidth="1"
+                    strokeDasharray="2,2"
+                  />
+                ))}
+
+                {/* 0 dB Reference Line */}
+                <line x1="0" y1="50" x2="600" y2="50" stroke="#334155" strokeWidth="1.5" />
+
+                {/* Magnitude Gain Trace (Emerald) */}
+                {bode && bode.gainDb.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    points={bode.gainDb
+                      .map((val, idx) => {
+                        const x = (idx / (bode.gainDb.length - 1)) * 600;
+                        // Map +20dB to 10px, 0dB to 50px, -60dB to 190px
+                        const y = 50 - val * 2.3;
+                        return `${x.toFixed(1)},${Math.max(5, Math.min(195, y)).toFixed(1)}`;
+                      })
+                      .join(" ")}
+                  />
+                )}
+
+                {/* Phase Trace (Purple Dashed) */}
+                {bode && bode.phaseDeg.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke="#a855f7"
+                    strokeWidth="1.8"
+                    strokeDasharray="4,3"
+                    strokeLinecap="round"
+                    points={bode.phaseDeg
+                      .map((val, idx) => {
+                        const x = (idx / (bode.phaseDeg.length - 1)) * 600;
+                        // Map 0° to 100px, -180° to 190px
+                        const y = 100 - (val / 180) * 80;
+                        return `${x.toFixed(1)},${Math.max(5, Math.min(195, y)).toFixed(1)}`;
+                      })
+                      .join(" ")}
+                  />
+                )}
+              </svg>
+
+              {/* Legend & Axis Labels */}
+              <div className="absolute top-3 left-4 flex items-center gap-4 text-[10px] font-mono">
+                <span className="flex items-center gap-1.5 text-emerald-400">
+                  <span className="w-3 h-0.5 bg-emerald-400 inline-block" /> Gain (dB)
+                </span>
+                <span className="flex items-center gap-1.5 text-purple-400">
+                  <span className="w-3 h-0.5 bg-purple-400 border-b border-dashed inline-block" /> Phase (°)
+                </span>
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-500 font-mono px-1 mt-1">
+                <span>10 Hz</span>
+                <span>100 Hz</span>
+                <span>1 kHz</span>
+                <span>10 kHz</span>
+                <span>100 kHz</span>
+                <span>1 MHz</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: DIGITAL LOGIC TIMING ANALYZER */}
+        {activeTab === "logic_analyzer" && (
+          <div className="logic-analyzer-workbench">
+            <div className="logic-header-bar">
+              <span className="la-title">Multi-Track Digital Timing Waveforms</span>
+              <span className="la-timebase">Clock Period: 500 ms • Synchronous Transitions</span>
+            </div>
+
+            <div className="logic-traces-container">
+              {Object.entries(simResult.logicWaveforms).map(([signalName, bitSamples]) => (
+                <div key={signalName} className="logic-channel-row">
+                  <div className="la-sig-label">
+                    <span>{signalName}</span>
                   </div>
-                  <div className="track-wave-col">
-                    <svg className="digital-wave-svg" viewBox="0 0 400 24" preserveAspectRatio="none">
-                      {samples.map((val, idx) => {
-                        const x1 = (idx / samples.length) * 400;
-                        const x2 = ((idx + 1) / samples.length) * 400;
-                        const y = val === 1 ? 3 : 21;
-                        return (
-                          <g key={idx}>
-                            <line
-                              x1={x1}
-                              y1={y}
-                              x2={x2}
-                              y2={y}
-                              stroke={trackName === "CLK" ? "#eab308" : "#22c55e"}
-                              strokeWidth="2"
-                            />
-                            {/* Vertical transition edge */}
-                            {idx > 0 && samples[idx - 1] !== val && (
-                              <line
-                                x1={x1}
-                                y1="3"
-                                x2={x1}
-                                y2="21"
-                                stroke={trackName === "CLK" ? "#eab308" : "#22c55e"}
-                                strokeWidth="2"
-                              />
-                            )}
-                          </g>
-                        );
-                      })}
+                  <div className="la-waveform-track">
+                    <svg className="la-svg" viewBox="0 0 500 24" preserveAspectRatio="none">
+                      <polyline
+                        fill="none"
+                        stroke="#22c55e"
+                        strokeWidth="2"
+                        points={bitSamples
+                          .flatMap((bit, idx) => {
+                            const x1 = (idx / bitSamples.length) * 500;
+                            const x2 = ((idx + 1) / bitSamples.length) * 500;
+                            const y = bit === 1 ? 4 : 20;
+                            return [
+                              `${x1.toFixed(1)},${y}`,
+                              `${x2.toFixed(1)},${y}`,
+                            ];
+                          })
+                          .join(" ")}
+                      />
                     </svg>
                   </div>
                 </div>
@@ -403,7 +519,7 @@ export default function InstrumentsDock({
           </div>
         )}
 
-        {/* TAB 3: BENCH DIGITAL MULTIMETER (DMM) */}
+        {/* TAB 4: BENCH DIGITAL MULTIMETER (DMM) */}
         {activeTab === "multimeter" && (
           <div className="dmm-workbench-view">
             <div className="fluke-multimeter-chassis">
@@ -470,11 +586,11 @@ export default function InstrumentsDock({
           </div>
         )}
 
-        {/* TAB 4: KICAD NETLIST & SPICE NODAL TABLE */}
+        {/* TAB 5: SPICE NETLIST & NODAL ANALYSIS */}
         {activeTab === "netlist" && (
           <div className="netlist-table-container">
             <div className="netlist-action-bar">
-              <span className="netlist-header-title">KiCad Electrical Netlist & Nodal Potentials</span>
+              <span className="netlist-header-title">Circuit Electrical Netlist & Nodal Potentials</span>
               <button type="button" className="btn-copy-netlist" onClick={handleCopyNetlist}>
                 {copiedNetlist ? <CheckCircle2 size={13} /> : <Copy size={13} />}
                 <span>{copiedNetlist ? "Copied SPICE Netlist!" : "Copy SPICE Netlist"}</span>

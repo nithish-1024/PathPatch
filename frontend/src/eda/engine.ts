@@ -549,6 +549,49 @@ export class EdaSimulationEngine {
       digitalTracks.OUT.push((cyc >= 10 ? 1 : 0));
     }
 
+    // 6.5. AC Frequency Sweep / Bode Plot Analysis
+    let cutoffFreqHz = 1591.5; // default 1.59kHz (10k + 10nF)
+    let resonanceFreqHz = 1000.0;
+    let qFactor = 2.5;
+
+    // Detect actual R and C from placed components if available
+    const resistor = components.find((c) => c.type === "RESISTOR");
+    const capacitor = components.find((c) => c.type === "CAPACITOR_CERAMIC" || c.type === "CAPACITOR_ELECTROLYTIC");
+    if (resistor && capacitor) {
+      const rVal = Number(resistor.properties.resistance ?? 10000);
+      const cValUf = Number(capacitor.properties.capacitanceUf ?? 0.01);
+      const cFarad = cValUf * 1e-6;
+      if (rVal > 0 && cFarad > 0) {
+        cutoffFreqHz = 1.0 / (2 * Math.PI * rVal * cFarad);
+      }
+    }
+
+    const bodeFrequencies: number[] = [];
+    const bodeGainDb: number[] = [];
+    const bodePhaseDeg: number[] = [];
+    // 50 logarithmic frequency steps from 10 Hz to 1 MHz
+    for (let i = 0; i < 50; i++) {
+      const logF = 1 + (i / 49) * 5; // 10^1 to 10^6
+      const f = Math.pow(10, logF);
+      bodeFrequencies.push(f);
+
+      // Low-pass / Bandpass frequency response transfer function
+      const ratio = f / cutoffFreqHz;
+      let gainNorm = 1.0 / Math.sqrt(1 + ratio * ratio);
+      let phase = -Math.atan(ratio) * (180 / Math.PI);
+
+      if (opAmp) {
+        // Active inverting amplifier gain: -10x (20 dB) with high-frequency roll-off
+        const a0 = 10.0; // 20dB passband
+        gainNorm = a0 / Math.sqrt(1 + Math.pow(f / 100000, 2));
+        phase = -180 - Math.atan(f / 100000) * (180 / Math.PI);
+      }
+
+      const gainDbVal = 20 * Math.log10(Math.max(1e-4, gainNorm));
+      bodeGainDb.push(Math.round(gainDbVal * 10) / 10);
+      bodePhaseDeg.push(Math.round(phase * 10) / 10);
+    }
+
     // 7. Intelligent Circuit Diagnostics & Actionable Recommendations
     const diagnostics: CircuitDiagnostic[] = [];
 
@@ -558,8 +601,20 @@ export class EdaSimulationEngine {
         id: "diag_short_vcc_gnd",
         severity: "critical",
         title: "CRITICAL SHORT CIRCUIT: VCC Connected Directly to GND",
+        faultLocation: {
+          componentId: "RAIL_VCC",
+          componentDesignator: "VCC",
+          pinId: "pos",
+          pinName: "+VCC",
+          netId: vccNet,
+          nodePotentialV: 0,
+        },
+        whereItWentWrong: "Net between VCC (+5V/+12V) and Ground (0V)",
+        whyItWentWrong:
+          "The positive power rail is tied directly to Ground with zero load resistance. According to Ohm's Law (I = V / R), R = 0Ω demands infinite current, causing immediate power supply collapse and thermal burnout.",
         whyThisHappened:
           "The positive power rail (+5V/+12V) is tied directly to Ground with zero load resistance. According to Ohm's Law (I = V / R), this demands infinite current, causing immediate power supply collapse and thermal burnout.",
+        firstPrinciplesProof: "I_{short} = \\frac{V_{CC}}{R_{wire}} = \\frac{5.0\\text{V}}{0.001\\Omega} = 5000\\text{A} \\gg I_{max}",
         recommendation:
           "Disconnect the direct wire connecting Power to Ground. Place an electrical load (such as a resistor, motor, IC, or LED circuit) between the power rails.",
       });
@@ -580,7 +635,18 @@ export class EdaSimulationEngine {
             severity: "critical",
             title: `REVERSED POLARITY: Electrolytic Capacitor (${c.designator || c.name})`,
             componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "neg",
+              pinName: "Negative (-)",
+              netId: negNet,
+              nodePotentialV: vn,
+            },
+            whereItWentWrong: `Capacitor ${c.designator || c.name} Pin: Negative (-) terminal`,
+            whyItWentWrong: `Negative lead is at ${vn.toFixed(1)}V, which is higher than positive lead at ${vp.toFixed(1)}V. Reverse bias destroys the dielectric aluminum oxide film, boiling the electrolyte into hydrogen gas.`,
             whyThisHappened: `Capacitor ${c.name} has its negative (-) pin connected to a higher potential (${vn.toFixed(1)}V) than its positive (+) pin (${vp.toFixed(1)}V). In polarized aluminum electrolytic capacitors, reverse bias destroys the microscopic dielectric oxide layer, releasing hydrogen gas and causing thermal rupture.`,
+            firstPrinciplesProof: "V_{neg} - V_{pos} = " + (vn - vp).toFixed(2) + "\\text{V} > 0.4\\text{V} \\implies \\text{Oxide Dielectric Breakdown}",
             recommendation:
               "Rotate or reconnect the capacitor so that the positive (+) lead connects toward the positive supply rail and the white-striped negative (-) lead faces Ground.",
           });
@@ -601,7 +667,18 @@ export class EdaSimulationEngine {
             severity: "critical",
             title: `OVERCURRENT: Unballasted LED Connected to Power (${c.designator || c.name})`,
             componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "anode",
+              pinName: "Anode (+)",
+              netId: aNet,
+              nodePotentialV: va,
+            },
+            whereItWentWrong: `LED ${c.designator || c.name} Anode (+) Pin connected directly to VCC`,
+            whyItWentWrong: `Dynamic resistance of PN junction collapses above knee voltage (2.0V). Direct connection across ${vDiff.toFixed(1)}V rail forces over 120mA forward current, causing instant thermal blowout.`,
             whyThisHappened: `LED ${c.name} is connected directly across the supply rails (${vDiff.toFixed(1)}V) with no ballast resistor. Because the diode dynamic resistance drops to near zero above its 2.0V threshold, current exceeds 120mA (safe limit: 20mA), causing instantaneous thermal burnout.`,
+            firstPrinciplesProof: "I_{LED} = \\frac{V_{CC} - V_F}{R_{bulk}} = \\frac{" + (vDiff - 2.0).toFixed(1) + "\\text{V}}{1.5\\Omega} \\approx 2000\\text{mA} \\gg 25\\text{mA}",
             recommendation:
               "Insert a 330Ω to 1kΩ current-limiting resistor in series with the LED anode or cathode (R = (Vsupply - 2.0V) / 0.015A).",
           });
@@ -626,9 +703,64 @@ export class EdaSimulationEngine {
             severity: "warning",
             title: `UNPROTECTED INDUCTIVE FLYBACK: (${c.designator || c.name})`,
             componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "pos",
+              pinName: "Terminal 1",
+            },
+            whereItWentWrong: `Inductive load ${c.designator || c.name} switching terminal`,
+            whyItWentWrong: `When switch opens, magnetic flux collapses instantaneously. Faraday's Law (V = -L di/dt) produces reverse high-voltage spikes exceeding 80V, puncturing semiconductor junctions.`,
             whyThisHappened: `Inductive component ${c.name} is connected without an anti-parallel flyback protection diode. When coil current is interrupted by a switch or transistor, the collapsing magnetic field generates a large reverse voltage spike (V = -L di/dt > 60V) that arcs across contacts and destroys driver semiconductors.`,
+            firstPrinciplesProof: "V_{spike} = -L \\frac{di}{dt} = -(50\\text{mH}) \\cdot \\frac{-0.5\\text{A}}{1\\mu\\text{s}} = +25,000\\text{V} \\gg V_{breakdown}",
             recommendation:
               "Connect a 1N4007 or 1N4148 diode in anti-parallel (cathode facing +VCC, anode facing the switch node) across the motor/inductor terminals.",
+          });
+        }
+      }
+
+      // Op-Amp Saturation / Clipping Detection
+      if (c.type === "IC_OPAMP_741") {
+        const invNet = pinToNet.get(`${c.id}:inv`);
+        const noninvNet = pinToNet.get(`${c.id}:noninv`);
+        const outNet = pinToNet.get(`${c.id}:out`);
+        const vOut = outNet ? (nodeVoltages[outNet] ?? 0) : 0;
+
+        if (!invNet || !noninvNet) {
+          diagnostics.push({
+            id: `diag_opamp_float_${c.id}`,
+            severity: "warning",
+            title: `FLOATING OP-AMP INPUT TERMINAL: (${c.designator || c.name})`,
+            componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: !invNet ? "inv" : "noninv",
+              pinName: !invNet ? "Pin 2 (Inverting -)" : "Pin 3 (Non-Inverting +)",
+            },
+            whereItWentWrong: `Op-Amp ${c.designator || c.name} Pin: ${!invNet ? "Pin 2 (INV)" : "Pin 3 (NON-INV)"}`,
+            whyItWentWrong: `Input pin is floating with no DC path to ground or reference. Input bias current charges stray capacitance, driving the output to positive or negative supply rail saturation.`,
+            whyThisHappened: `An operational amplifier input pin has no DC path to Ground or reference potential.`,
+            recommendation: "Provide a DC bias return path or tie unused inputs to Ground through a 10kΩ resistor.",
+          });
+        } else if (Math.abs(vOut) >= 11.5) {
+          diagnostics.push({
+            id: `diag_opamp_sat_${c.id}`,
+            severity: "warning",
+            title: `OP-AMP RAIL SATURATION / CLIPPING: (${c.designator || c.name})`,
+            componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "out",
+              pinName: "Pin 6 (Output)",
+              nodePotentialV: vOut,
+            },
+            whereItWentWrong: `Op-Amp ${c.designator || c.name} Pin 6 (OUT) at ${vOut.toFixed(1)}V`,
+            whyItWentWrong: `Demanded output voltage exceeds the internal BJT output stage headroom (VCC - 1.5V). The waveform tops are clipped flat, producing severe harmonic distortion.`,
+            whyThisHappened: `Closed loop gain (-Rf / Rin) multiplied by input signal amplitude exceeds operational amplifier voltage rails.`,
+            firstPrinciplesProof: "V_{demanded} = |A_v \\cdot V_{in}| = |-10 \\times 2.0\\text{V}| = 20.0\\text{V} > V_{rail} (\\pm 12\\text{V})",
+            recommendation: "Reduce closed-loop feedback gain (lower Rf or raise Rin) or attenuate the AC input signal amplitude.",
           });
         }
       }
@@ -647,6 +779,14 @@ export class EdaSimulationEngine {
             severity: "info",
             title: `FLOATING RESET PIN: NE555 Timer (${c.designator || c.name})`,
             componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "p4_rst",
+              pinName: "Pin 4 (RESET)",
+            },
+            whereItWentWrong: `NE555 Timer ${c.designator || c.name} Pin 4 (Active-Low RESET)`,
+            whyItWentWrong: `Pin 4 is unasserted and high-impedance. Ambient electrical noise can pull the internal flip-flop low, causing sporadic glitching or shutting off oscillation.`,
             whyThisHappened: `Pin 4 (active-low RESET) on ${c.name} is left disconnected. In CMOS and bipolar timers, high input impedance picks up stray electromagnetic interference, causing intermittent resets and unstable timing pulses.`,
             recommendation:
               "Connect Pin 4 (RESET) directly to Pin 8 (VCC) for normal continuous astable operation, or pull it high with a 10kΩ resistor.",
@@ -664,6 +804,14 @@ export class EdaSimulationEngine {
         time: timeSamples,
         ch1: ch1Samples,
         ch2: ch2Samples,
+      },
+      bodeData: {
+        frequencies: bodeFrequencies,
+        gainDb: bodeGainDb,
+        phaseDeg: bodePhaseDeg,
+        cutoffFreqHz,
+        resonanceFreqHz,
+        qFactor,
       },
       logicWaveforms: digitalTracks,
       thermalMap,

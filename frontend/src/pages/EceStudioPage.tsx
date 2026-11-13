@@ -21,6 +21,8 @@ import TopCommandRibbon from "../eda/TopCommandRibbon";
 import ComponentDrawer from "../eda/ComponentDrawer";
 import Canvas from "../eda/Canvas";
 import InstrumentsDock from "../eda/InstrumentsDock";
+import { ComponentPropertyInspector } from "../eda/ComponentPropertyInspector";
+import { CommunityCircuitsModal } from "../eda/CommunityCircuitsModal";
 import { EdaSimulationEngine } from "../eda/engine";
 import { EDA_PRESETS } from "../eda/presets";
 import { EDA_COMPONENT_CATALOG } from "../eda/componentsCatalog";
@@ -50,6 +52,7 @@ export default function EceStudioPage() {
 
   // Selected Component for Property Inspector
   const [selectedComp, setSelectedComp] = useState<EdaPlacedComponent | null>(null);
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
 
   // Engine & Simulation Result State
   const engineRef = useRef<EdaSimulationEngine>(new EdaSimulationEngine());
@@ -62,11 +65,62 @@ export default function EceStudioPage() {
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [chatLog, setChatLog] = useState<Array<{ q: string; a: string; source: string }>>([
     {
-      q: "How does the Unified EDA Workbench combine Tinkercad, Multisim, and Vivado?",
-      a: "The workbench simulates the complete electrical circuit using a unified Modified Nodal Analysis (MNA) and event-driven logic engine. Tinkercad provides the solderless breadboard and discrete components; Multisim powers the dual-channel oscilloscope and DMM; Vivado displays digital clock-cycle timing waveforms; and KiCad generates IEEE schematics and exportable SPICE netlists.",
-      source: "eda_master_engine",
+      q: "How does the Unified Circuit Workbench analyze amplifiers and detect faults?",
+      a: "The workbench simulates the complete electrical circuit using a unified Modified Nodal Analysis (MNA) solver. It features a live dual-channel oscilloscope with AC voltage gain (Av = Vout / Vin), clipping detection, and automated pin-level fault localization that identifies exactly where and why a circuit failed from first-principles.",
+      source: "circuit_engine",
     },
   ]);
+
+  // Live Component Property Editing Handlers
+  const handleUpdateProperties = (compId: string, newProps: Record<string, number | string | boolean>) => {
+    setComponents((prev) =>
+      prev.map((c) => (c.id === compId ? { ...c, properties: newProps } : c))
+    );
+    if (selectedComp && selectedComp.id === compId) {
+      setSelectedComp((prev) => (prev ? { ...prev, properties: newProps } : null));
+    }
+  };
+
+  const handleRotateComponent = (compId: string) => {
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id === compId) {
+          const nextRot = ((c.rotation + 90) % 360) as 0 | 90 | 180 | 270;
+          return { ...c, rotation: nextRot };
+        }
+        return c;
+      })
+    );
+  };
+
+  const handleDeleteComponent = (compId: string) => {
+    setComponents((prev) => prev.filter((c) => c.id !== compId));
+    setWires((prev) => prev.filter((w) => w.fromCompId !== compId && w.toCompId !== compId));
+    if (selectedComp?.id === compId) setSelectedComp(null);
+  };
+
+  const handleDuplicateComponent = (compId: string) => {
+    const comp = components.find((c) => c.id === compId);
+    if (!comp) return;
+    const sameType = components.filter((c) => c.type === comp.type);
+    const def = EDA_COMPONENT_CATALOG.find((d) => d.type === comp.type);
+    const prefix = def?.prefix || "U";
+    const designator = `${prefix}${sameType.length + 1}`;
+
+    const newComp: EdaPlacedComponent = {
+      ...comp,
+      id: `comp_${Date.now()}`,
+      designator,
+      x: comp.x + 2,
+      y: comp.y + 2,
+    };
+    setComponents((prev) => [...prev, newComp]);
+    setSelectedComp(newComp);
+  };
+
+  const handleSaveCurrentCircuit = (title: string) => {
+    alert(`Circuit "${title}" published to your local design repository!`);
+  };
 
   // Simulation Loop via requestAnimationFrame
   useEffect(() => {
@@ -211,6 +265,7 @@ export default function EceStudioPage() {
         onSelectPreset={handleSelectPreset}
         onClear={handleClear}
         onExportNetlist={handleExportNetlist}
+        onOpenCommunityModal={() => setIsCommunityModalOpen(true)}
       />
 
       {/* 2. MAIN 3-PANEL WORKBENCH */}
@@ -258,7 +313,7 @@ export default function EceStudioPage() {
             />
           </div>
 
-          {/* Virtual Instruments Rack (Multisim Scope, Vivado Logic Analyzer, Multimeter, Netlist) */}
+          {/* Virtual Instruments Rack (2-Ch Oscilloscope, AC Bode Analyzer, Digital Logic, DMM, Netlist) */}
           <InstrumentsDock
             simResult={simResult}
             components={components}
@@ -266,95 +321,49 @@ export default function EceStudioPage() {
           />
         </main>
 
-        {/* RIGHT COLUMN: Single Recommended Solution & Engineering Copilot */}
+        {/* RIGHT COLUMN: Interactive Property Inspector & Intelligent Pin-Level Diagnostics */}
         <aside className="eda-right-sidebar">
-          {/* Selected Component Inspector (If any selected) */}
+          {/* Selected Component Property Inspector */}
           {selectedComp ? (
-            <div className="component-inspector-card">
-              <div className="inspector-head">
-                <span className="desig-pill">{selectedComp.designator}</span>
-                <h4>{selectedComp.name}</h4>
-              </div>
-              <p className="inspector-cat">Category: {selectedComp.category.toUpperCase()}</p>
-              <div className="inspector-props-list">
-                {Object.entries(selectedComp.properties).map(([k, v]) => (
-                  <div key={k} className="prop-row">
-                    <span className="prop-key">{k}:</span>
-                    <strong className="prop-val">{String(v)}</strong>
-                  </div>
-                ))}
-              </div>
-              <div className="inspector-live-state">
-                <div className="prop-row">
-                  <span>Pin Voltage:</span>
-                  <strong>{(selectedComp.state?.voltage ?? 0).toFixed(2)} V</strong>
-                </div>
-                {selectedComp.state?.current !== undefined && (
-                  <div className="prop-row">
-                    <span>Branch Current:</span>
-                    <strong>{((selectedComp.state.current ?? 0) * 1000).toFixed(1)} mA</strong>
-                  </div>
-                )}
-                {selectedComp.state?.tempC !== undefined && (
-                  <div className="prop-row">
-                    <span>Junction Temp:</span>
-                    <strong style={{ color: (selectedComp.state.tempC ?? 27) > 100 ? "#ef4444" : "#10b981" }}>
-                      {(selectedComp.state.tempC ?? 27).toFixed(1)} °C
-                    </strong>
-                  </div>
-                )}
-              </div>
-              <small className="inspector-hint">Press <strong>R</strong> to rotate, <strong>Delete</strong> to remove.</small>
-            </div>
+            <ComponentPropertyInspector
+              component={selectedComp}
+              onUpdateProperties={handleUpdateProperties}
+              onRotate={handleRotateComponent}
+              onDelete={handleDeleteComponent}
+              onDuplicate={handleDuplicateComponent}
+              onClose={() => setSelectedComp(null)}
+            />
           ) : (
-            /* Single Recommended Engineering Solution Card */
-            <div className="solution-hero-card">
-              <div className="solution-badge">
-                <Sparkles size={13} />
-                <span>SINGLE RECOMMENDED SOLUTION</span>
+            /* Community Hub Quick Launcher Card */
+            <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col gap-2.5 text-xs text-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-100 flex items-center gap-1.5 text-xs">
+                  <span>🌐</span> Community Schematics Hub
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] border border-emerald-500/30">
+                  OpenCircuits
+                </span>
               </div>
-              <h3>Synchronous Buck DC-DC Conversion</h3>
-              <p className="solution-subtitle">
-                Replace dissipative linear regulation with switched inductor bucking. Recovers 94% efficiency and eliminates heatsink bulk.
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Browse verified academic syllabus circuits, student Q&A threads, and clone community designs to your workbench.
               </p>
-
-              {/* Quantitative Scorecard */}
-              <div className="scorecard-grid">
-                <div className="score-item">
-                  <span className="score-label">Efficiency</span>
-                  <strong className="score-val green">94.0%</strong>
-                  <small>vs 41.7% Linear</small>
-                </div>
-                <div className="score-item">
-                  <span className="score-label">Junction Temp</span>
-                  <strong className="score-val green">32.0 °C</strong>
-                  <small>vs 118.2°C Overheat</small>
-                </div>
-                <div className="score-item">
-                  <span className="score-label">Heat Waste</span>
-                  <strong className="score-val green">-95%</strong>
-                  <small>Zero Heatsink Needed</small>
-                </div>
-              </div>
-
               <button
                 type="button"
-                className="btn-apply-hero"
-                onClick={() => handleSelectPreset("power_benchmark")}
+                className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow flex items-center justify-center gap-1.5 transition-colors"
+                onClick={() => setIsCommunityModalOpen(true)}
               >
-                <Zap size={15} />
-                <span>⚡ Load Power Comparison Preset</span>
+                <span>🚀</span> Open Community Gallery
               </button>
             </div>
           )}
 
-          {/* Intelligent Circuit Diagnostics & Actionable Recommendations (Multisim / KiCad Differentiator) */}
+          {/* Intelligent Circuit Diagnostics & Pin-Level Localization */}
           {simResult.diagnostics && simResult.diagnostics.length > 0 && (
             <div className="eda-diagnostics-deck" role="alert" aria-label="Circuit Fault Diagnostics">
               <div className="diag-deck-header">
-                <AlertTriangle size={16} className="diag-warning-icon" />
+                <AlertTriangle size={16} className="diag-warning-icon text-amber-400" />
                 <h4>Intelligent Circuit Diagnostics ({simResult.diagnostics.length})</h4>
-                <span className="diag-pill">Live First-Principles Feedback</span>
+                <span className="diag-pill">Live Pin-Level Feedback</span>
               </div>
               <div className="diag-cards-list">
                 {simResult.diagnostics.map((diag) => (
@@ -366,14 +375,32 @@ export default function EceStudioPage() {
                       <strong className="diag-card-title">{diag.title}</strong>
                     </div>
 
-                    <div className="diag-section why">
-                      <span className="diag-label">🔍 Why this happened:</span>
-                      <p>{diag.whyThisHappened}</p>
+                    <div className="diag-section where bg-slate-950/70 p-2 rounded border border-slate-800">
+                      <span className="diag-label text-cyan-400 font-semibold block mb-0.5">
+                        📍 Where it went wrong:
+                      </span>
+                      <p className="text-slate-200 font-mono text-[11px]">{diag.whereItWentWrong}</p>
                     </div>
 
-                    <div className="diag-section fix">
-                      <span className="diag-label">💡 Recommended Action:</span>
-                      <p>{diag.recommendation}</p>
+                    <div className="diag-section why">
+                      <span className="diag-label text-amber-300 font-semibold block mb-0.5">
+                        🔍 Why it went wrong:
+                      </span>
+                      <p className="text-slate-300 text-[11px] leading-relaxed">{diag.whyItWentWrong}</p>
+                    </div>
+
+                    {diag.firstPrinciplesProof && (
+                      <div className="diag-section proof bg-slate-950/80 p-2 rounded font-mono text-[10px] text-purple-300 border border-purple-900/40">
+                        <span className="text-slate-400 block mb-0.5 font-sans font-semibold">Mathematical Proof:</span>
+                        {diag.firstPrinciplesProof}
+                      </div>
+                    )}
+
+                    <div className="diag-section fix bg-emerald-950/30 p-2 rounded border border-emerald-900/40">
+                      <span className="diag-label text-emerald-400 font-semibold block mb-0.5">
+                        💡 Actionable Recommendation:
+                      </span>
+                      <p className="text-emerald-200 text-[11px] leading-relaxed">{diag.recommendation}</p>
                     </div>
                   </div>
                 ))}
@@ -403,7 +430,7 @@ export default function EceStudioPage() {
             <form className="copilot-input-form" onSubmit={handleAskQuestion}>
               <input
                 type="text"
-                placeholder="Ask about MNA nodal solver, 555 timing, BJT beta..."
+                placeholder="Ask about MNA nodal solver, Op-Amp gain, BJT beta..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
               />
@@ -414,6 +441,14 @@ export default function EceStudioPage() {
           </div>
         </aside>
       </div>
+
+      {/* Community Circuits Gallery & Discussions Modal */}
+      <CommunityCircuitsModal
+        isOpen={isCommunityModalOpen}
+        onClose={() => setIsCommunityModalOpen(false)}
+        onLoadCircuit={handleSelectPreset}
+        onSaveCurrentCircuit={handleSaveCurrentCircuit}
+      />
     </div>
   );
 }

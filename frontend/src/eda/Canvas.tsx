@@ -1,11 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type {
+  CircuitDiagnostic,
   EdaPlacedComponent,
   EdaWire,
   SimulationResult,
   ViewMode,
 } from "./types";
 import { DIGIT_SEGMENTS } from "./engine";
+
+// Helper for dynamic EIA 4-band resistor stripes
+function getResistorStripeColors(rOhms: number) {
+  const EIA = ["#000000", "#78350f", "#dc2626", "#ea580c", "#eab308", "#16a34a", "#2563eb", "#9333ea", "#64748b", "#ffffff"];
+  if (rOhms <= 0) return { b1: EIA[1], b2: EIA[0], mult: EIA[0] };
+  const s = Math.round(rOhms).toString();
+  const d1 = parseInt(s[0] ?? "1", 10);
+  const d2 = parseInt(s[1] ?? "0", 10);
+  const exp = Math.max(0, Math.floor(Math.log10(rOhms)) - 1);
+  return {
+    b1: EIA[d1] ?? "#78350f",
+    b2: EIA[d2] ?? "#000000",
+    mult: EIA[exp % 10] ?? "#78350f",
+  };
+}
 
 interface CanvasProps {
   components: EdaPlacedComponent[];
@@ -37,6 +53,7 @@ export default function Canvas({
   const [selectedWireId, setSelectedWireId] = useState<string | null>(null);
   const [draggingCompId, setDraggingCompId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [activeFaultTooltip, setActiveFaultTooltip] = useState<CircuitDiagnostic | null>(null);
 
   // Wiring State (Pin to Pin connection)
   const [pendingWire, setPendingWire] = useState<{
@@ -383,20 +400,24 @@ export default function Canvas({
             >
               {/* Visual Body Rendering Based on Component Type */}
               {/* --- RESISTOR --- */}
-              {comp.type === "RESISTOR" && (
-                <g>
-                  {/* Lead wires */}
-                  <line x1="-36" y1="0" x2="-18" y2="0" stroke="#64748b" strokeWidth="2.5" />
-                  <line x1="18" y1="0" x2="36" y2="0" stroke="#64748b" strokeWidth="2.5" />
-                  {/* Ceramic Body */}
-                  <rect x="-18" y="-7" width="36" height="14" rx="4" fill="#fde68a" stroke="#d97706" strokeWidth="1.5" />
-                  {/* 4-Band EIA Color Stripes (e.g. 1k = Brown, Black, Red, Gold) */}
-                  <line x1="-10" y1="-7" x2="-10" y2="7" stroke="#78350f" strokeWidth="2.5" />
-                  <line x1="-4" y1="-7" x2="-4" y2="7" stroke="#000000" strokeWidth="2.5" />
-                  <line x1="2" y1="-7" x2="2" y2="7" stroke="#dc2626" strokeWidth="2.5" />
-                  <line x1="10" y1="-7" x2="10" y2="7" stroke="#ca8a04" strokeWidth="2" />
-                </g>
-              )}
+              {comp.type === "RESISTOR" && (() => {
+                const rVal = Number(comp.properties.resistance ?? 1000);
+                const stripes = getResistorStripeColors(rVal);
+                return (
+                  <g>
+                    {/* Lead wires */}
+                    <line x1="-36" y1="0" x2="-18" y2="0" stroke="#64748b" strokeWidth="2.5" />
+                    <line x1="18" y1="0" x2="36" y2="0" stroke="#64748b" strokeWidth="2.5" />
+                    {/* Ceramic Body */}
+                    <rect x="-18" y="-7" width="36" height="14" rx="4" fill="#fde68a" stroke="#d97706" strokeWidth="1.5" />
+                    {/* Dynamic 4-Band EIA Color Stripes */}
+                    <line x1="-10" y1="-7" x2="-10" y2="7" stroke={stripes.b1} strokeWidth="2.5" />
+                    <line x1="-4" y1="-7" x2="-4" y2="7" stroke={stripes.b2} strokeWidth="2.5" />
+                    <line x1="2" y1="-7" x2="2" y2="7" stroke={stripes.mult} strokeWidth="2.5" />
+                    <line x1="10" y1="-7" x2="10" y2="7" stroke="#ca8a04" strokeWidth="2" />
+                  </g>
+                );
+              })()}
 
               {/* --- POTENTIOMETER --- */}
               {comp.type === "POTENTIOMETER" && (
@@ -642,17 +663,40 @@ export default function Canvas({
                 const pinX = rx * cos - ry * sin;
                 const pinY = rx * sin + ry * cos;
 
+                // Check for pin-level fault diagnostic
+                const faultDiag = simResult.diagnostics.find(
+                  (d) =>
+                    d.faultLocation?.componentId === comp.id &&
+                    (d.faultLocation?.pinId === pin.id || !d.faultLocation?.pinId)
+                );
+
                 return (
                   <g
                     key={pin.id}
                     transform={`translate(${pinX}, ${pinY})`}
                     onClick={(e) => handlePinClick(e, comp, pin.id)}
-                    className="canvas-terminal-pin"
+                    onMouseEnter={() => {
+                      if (faultDiag) setActiveFaultTooltip(faultDiag);
+                    }}
+                    onMouseLeave={() => {
+                      if (faultDiag) setActiveFaultTooltip(null);
+                    }}
+                    className="canvas-terminal-pin cursor-pointer"
                   >
                     {/* Magnetic snap halo */}
                     <circle cx="0" cy="0" r="8" fill="transparent" stroke="#22c55e" strokeWidth="1.5" opacity="0.6" className="pin-target-halo" />
+
                     {/* Metal Pin Contact */}
                     <circle cx="0" cy="0" r="4.0" fill="#94a3b8" stroke="#1e293b" strokeWidth="1.5" />
+
+                    {/* Pin-Level Fault Warning Beacon (Pulsing Red Halo) */}
+                    {faultDiag && (
+                      <g className="cursor-help">
+                        <circle cx="0" cy="0" r="14" fill="#ef4444" opacity="0.4" className="animate-ping" />
+                        <circle cx="0" cy="0" r="10" fill="none" stroke="#ef4444" strokeWidth="2.5" />
+                        <circle cx="0" cy="0" r="3" fill="#ef4444" />
+                      </g>
+                    )}
                   </g>
                 );
               })}
@@ -660,6 +704,43 @@ export default function Canvas({
           );
         })}
       </svg>
+
+      {/* Floating On-Canvas Pin Fault Explanation Card */}
+      {activeFaultTooltip && (
+        <div className="absolute top-4 left-4 max-w-sm bg-slate-900/95 border border-rose-500/80 rounded-xl p-3 shadow-2xl text-xs backdrop-blur z-20 text-slate-100 flex flex-col gap-1.5 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-rose-400 flex items-center gap-1.5">
+              <span>⚠️</span> Fault Location Identified
+            </span>
+            <span className="text-[10px] bg-rose-950 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800 font-mono">
+              {activeFaultTooltip.severity.toUpperCase()}
+            </span>
+          </div>
+          <div className="text-[11px] leading-tight">
+            <strong className="text-slate-300">Where it went wrong:</strong>{" "}
+            <span className="text-amber-300 font-mono">{activeFaultTooltip.whereItWentWrong}</span>
+          </div>
+          <div className="text-[11px] text-slate-300 leading-snug">
+            <strong className="text-slate-200">Why it went wrong:</strong> {activeFaultTooltip.whyItWentWrong}
+          </div>
+          {activeFaultTooltip.firstPrinciplesProof && (
+            <div className="font-mono text-[10px] bg-slate-950 p-2 rounded border border-slate-800 text-cyan-300">
+              {activeFaultTooltip.firstPrinciplesProof}
+            </div>
+          )}
+          <div className="text-[10px] text-emerald-400 bg-emerald-950/40 p-1.5 rounded border border-emerald-900/50">
+            <strong>Fix:</strong> {activeFaultTooltip.recommendation}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Keyboard Shortcuts HUD */}
+      <div className="absolute bottom-3 right-3 bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-1.5 text-[10px] text-slate-300 shadow-lg flex items-center gap-3 backdrop-blur font-mono pointer-events-none">
+        <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600">Esc</kbd> Cancel Wire</span>
+        <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600">Del</kbd> Delete</span>
+        <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600">R</kbd> Rotate 90°</span>
+        <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600">Pin Click</kbd> Connect</span>
+      </div>
     </div>
   );
 }
