@@ -1,3 +1,13 @@
+export interface ArchitecturePathway {
+  id: "path_a" | "path_b" | "path_c";
+  label: string;
+  name: string;
+  recommended?: boolean;
+  exactDefinition: string;
+  summary: string;
+  tradeOff: string;
+}
+
 export interface ContradictionIdea {
   id: string;
   title: string;
@@ -22,6 +32,7 @@ export interface ContradictionIdea {
     myth: string;
     brutalTruth: string;
   };
+  pathways: ArchitecturePathway[];
   hardenedBlueprint: {
     title: string;
     sub: string;
@@ -66,6 +77,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "You spend $150 on solar panels and throw $85 of that capacity directly into the trash. The PWM pulses trigger lithium plating and hot-spot degradation, shrinking pack capacity by 40% in 6 months.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Passive Shunt / PWM Regulator Fix",
+            "exactDefinition": "Clamp the PV panel directly to battery terminal voltage via basic duty-cycle pulse-width modulation.",
+            "summary": "Direct PWM charging without impedance matching; requires an oversized aluminum heatsink to handle 80W waste heat.",
+            "tradeOff": "Discards 55% of panel power as heat; induces lithium dendrite wear in cells."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Synchronous 150kHz MPPT Buck Regulator (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Dynamically track maximum power point (P&O) and down-convert voltage with dual low-RDS(on) synchronous MOSFETs.",
+            "summary": "TI LM5117/SM72442 with CSD19534Q5A FETs achieving 96.2% efficiency and cool 2.8W dissipation.",
+            "tradeOff": "Requires custom PCB layout with copper ground fill beneath the inductor."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Interleaved Multi-Phase Micro-Inverter Grid Architecture",
+            "exactDefinition": "Convert individual panel strings through dedicated distributed GaN micro-inverters directly to AC bus.",
+            "summary": "Eliminates single-point DC string failures; provides panel-level telemetry and cloud microgrid optimization.",
+            "tradeOff": "3.5x higher upfront hardware capital cost."
+      }
+],
     hardenedBlueprint: {
       title: "Synchronous 150kHz MPPT Buck Regulator with Low-RDS(on) MOSFETs",
       sub: "TI LM5117 / SM72442 controller with Perturb & Observe tracking, delivering 96.2% conversion efficiency with under 2.8W thermal dissipation.",
@@ -125,6 +163,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "A 25V capacitor on a 25.2V 6S battery has zero safety margin. Standard electrolytics have high ESR (> 150 mΩ) and cannot absorb 20 ns transients. The spike blows straight past the capacitor and incinerates your flight core.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: High-Capacity Electrolytic Snubber Cap",
+            "exactDefinition": "Solder a high-voltage 50V low-ESR electrolytic capacitor directly across the XT60 battery lead.",
+            "summary": "Absorbs bulk inductive surge energy; immediate cheap fix to reduce transient amplitude.",
+            "tradeOff": "Adds 18 grams weight; cannot clamp nanosecond sub-microsecond voltage spikes."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Two-Tier TVS Clamping + 60V Monolithic Buck (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Clamp back-EMF spikes with an ultra-fast bidirectional TVS diode backed by a 60V-rated step-down regulator and isolated RF LDO.",
+            "summary": "Littelfuse SMBJ28A + Panasonic OS-CON array + TI TPS54302 (60V input) dedicated to flight core.",
+            "tradeOff": "Requires dedicated PCB real estate and star-ground copper isolation."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Galvanically Isolated Optical Flight Core Architecture",
+            "exactDefinition": "Optically decouple flight control logic completely from motor power distribution via digital isolators.",
+            "summary": "100% electrical isolation between motor ESCs and flight IMU via high-speed digital isolators.",
+            "tradeOff": "Adds $25 BOM cost and extra power supply converters."
+      }
+],
     hardenedBlueprint: {
       title: "Two-Tier TVS Clamping + Low-ESR Polymer Array + 60V Monolithic Buck",
       sub: "Littelfuse SMBJ28A TVS + Panasonic OS-CON array + TI TPS54302 (60V rated) with dedicated RF LDO for the IMU.",
@@ -184,6 +249,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "delay() keeps the MCU clock burning 45 mA. Resistive copper probes dissolve into soil ions within 14 days. Your irrigation decisions will be based on phantom data from open circuits.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: GPIO Analog Pulse Read",
+            "exactDefinition": "Power analog soil probes only when reading by toggling an MCU GPIO pin HIGH for 50 ms.",
+            "summary": "Cuts probe corrosion by 95% compared to continuous DC power using simple code changes.",
+            "tradeOff": "GPIO pin current limit (20 mA) restricts multi-sensor excitation."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: P-FET Power Gating + 2MHz Capacitive Sensing (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Disconnect all analog sensor rails via low-leakage P-channel MOSFET and excite capacitive moisture probes at 2 MHz.",
+            "summary": "Diodes AP22802 high-side switch + STM32WLE5CC running 1.1\u00b5A deep sleep, extending 2600mAh battery life to 24.5 years.",
+            "tradeOff": "Requires conformal coating on capacitive probe tines."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Sub-GHz Wireless Soil Micro-Probe Array",
+            "exactDefinition": "Deploy distributed wireless sealed sensor pellets communicating via sub-surface NFC/BLE to central mast.",
+            "summary": "Zero exposed cables in greenhouse soil; multi-depth root zone profiling.",
+            "tradeOff": "Higher deployment complexity and battery maintenance per pellet."
+      }
+],
     hardenedBlueprint: {
       title: "P-FET High-Side Power Gating + 2MHz Capacitive Sensing + 1.1µA Sleep",
       sub: "Diodes Inc. AP22802 power gate disconnecting all sensor rails between 15ms sample bursts; single 2600mAh cell lasts 24.5 years.",
@@ -243,6 +335,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "Passive balancing turns your safety system into an internal battery heater. When a cell has high internal resistance, heating it up accelerates thermal runaway. Bleeding energy away permanently sacrifices vehicle range.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Thermally Managed Passive Bleed Array",
+            "exactDefinition": "Increase bleed resistor surface area and couple them directly to an external aluminum enclosure heatsink.",
+            "summary": "Safely dissipates 3.6W heat outside the IP67 battery compartment using thermal gap pads.",
+            "tradeOff": "Still wastes battery energy as pure heat; slow 100mA balancing rate."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Active Inductive Charge Shuttling (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Shuttle charge bidirectionally from high cells back to the entire pack rail via flyback transformers at 5A.",
+            "summary": "Analog Devices LTC3300-1 balancing engine delivering 92% efficiency with zero trapped enclosure heat.",
+            "tradeOff": "Requires planar flyback transformers for each adjacent cell pair."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Modular Smart Cell Switched Battery Architecture",
+            "exactDefinition": "Equip every individual cell with an integrated micro-MOSFET bypass H-bridge for dynamic software pack reconfigurability.",
+            "summary": "Software isolates weak or dead cells mid-drive without stopping the vehicle; native synthesized AC inverter output.",
+            "tradeOff": "High transistor count and complex high-frequency switching firmware."
+      }
+],
     hardenedBlueprint: {
       title: "Active Inductive Charge Shuttling (LTC3300-1) + 5kV Galvanic Isolation",
       sub: "Analog Devices LTC3300-1 transferring charge from high cells back to the pack at up to 5A with 92% efficiency; zero trapped heat.",
@@ -302,6 +421,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "Once an operational amplifier clips into the supply rail, all AC biological information is permanently destroyed. Mathematical filters cannot extract data from a flatline.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: AC-Coupled Low-Gain Differential Stage",
+            "exactDefinition": "Place series DC-blocking capacitors before an instrumentation amplifier with gain limited to 50\u00d7.",
+            "summary": "Blocks \u00b1300mV DC contact potential before amplification to prevent rail saturation.",
+            "tradeOff": "Low gain demands higher resolution digitizer; long recovery time after electrode detachment."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Right Leg Drive (RLD) Active Feedback + Optical Cancellation (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Neutralize common-mode hum via active inverted body feedback and subtract ambient photodiode current via DAC.",
+            "summary": "TI ADS1292R (24-bit, >110dB CMRR) paired with MAX86176 optical ambient subtraction DAC.",
+            "tradeOff": "Requires a third body contact electrode for the RLD circuit."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Textile Capacitive Non-Contact Biopotential Array",
+            "exactDefinition": "Embed non-contact capacitive conductive textile electrodes into apparel with integrated ultra-high input impedance buffers.",
+            "summary": "Zero skin irritation or gel required; continuous medical telemetry through ordinary fabric.",
+            "tradeOff": "Highly sensitive to electrostatic friction artifacts during fast movement."
+      }
+],
     hardenedBlueprint: {
       title: "Right Leg Drive (RLD) Active Cancellation + Ambient Optical Subtraction",
       sub: "TI ADS1292R medical AFE with active RLD feedback providing > 110 dB CMRR, paired with MAX86176 optical ambient light cancellation DAC.",
@@ -361,6 +507,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "A 1 kV surge across an 0805 resistor will jump straight across the pads through an air arc (flashover voltage is only 300V). The 1N4148 diode explodes under 250mA surge, followed instantly by your microcontroller.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Heavy-Duty Metal Oxide Varistor (MOV) Clamping",
+            "exactDefinition": "Shunt high-voltage lightning surges to earth ground using high-energy zinc oxide varistors.",
+            "summary": "Clamps high-voltage spikes to safe levels; inexpensive standard surge protection.",
+            "tradeOff": "MOVs degrade with each strike and have high internal capacitance (smears fast traveling waves)."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Rogowski Transducer + GDT/TVS Network + 50kV/\u00b5s Optical Modulator (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Sense current with non-saturating air-core Rogowski coil and transmit data across fiber optics with 50kV/\u00b5s CMTI isolation.",
+            "summary": "Bourns GDT + Ohmite non-inductive wirewound + Broadcom ACPL-C799 resolving fault location to \u00b1150m.",
+            "tradeOff": "Requires high-stability GPS time-stamping receiver (1 PPS)."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Distributed Optical Fiber Acoustic & Polarimetric Sensor",
+            "exactDefinition": "Utilize existing optical ground wire (OPGW) fibers as continuous distributed interferometric fault sensors.",
+            "summary": "Zero electronic sensors along transmission towers; detects flashovers anywhere along 100 km line.",
+            "tradeOff": "Requires expensive substation optical time-domain reflectometer (OTDR) interrogator ($40k+)."
+      }
+],
     hardenedBlueprint: {
       title: "Galvanic Rogowski Sensor + Bourns GDT + Broadcom 50kV/µs CMTI Isolation",
       sub: "Non-saturating air-core Rogowski coil coupled to a 3-tier GDT/TVS network and ACPL-C799 optically isolated modulator.",
@@ -420,6 +593,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "The MQ-2 heater will drain the battery before sundown on day one. In winter at -10°C, the battery freezes, solar output collapses under canopy snow, and your network goes blind before fire season starts.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Duty-Cycled Metal-Oxide Sensor Heating",
+            "exactDefinition": "Power on standard gas sensor heaters for 30 seconds every 15 minutes instead of continuous operation.",
+            "summary": "Cuts average power from 800 mW to 26 mW; extends battery life from 18 hours to 2 weeks.",
+            "tradeOff": "Long pre-heat warmup required before readings stabilize; still freezes in sub-zero winter."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Cold-Climate LTO Battery (-40\u00b0C) + Pulsed MEMS + Optical FIR (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Store energy in non-freezing Lithium Titanate cells and detect fires through 35ms pulsed MEMS and passive infrared thermopiles.",
+            "summary": "TI BQ25570 MPPT + Nichicon LTO + Sensirion SGP40 (120\u00b5W avg), operating reliably from -40\u00b0C to +60\u00b0C.",
+            "tradeOff": "LTO has lower energy density than traditional Li-ion (needs slightly larger physical cell)."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Satellite IoT Direct-to-Cell Wilderness Mesh",
+            "exactDefinition": "Equip nodes with direct satellite uplinks (Iridium / Astrocast) and thermal imaging camera cores.",
+            "summary": "Eliminates ground gateway requirements in remote mountain valleys; transmits instant fire infrared maps.",
+            "tradeOff": "Higher monthly satellite airtime data subscription costs."
+      }
+],
     hardenedBlueprint: {
       title: "TI BQ25570 MPPT + Nichicon LTO (-40°C) + Pulsed Sensirion SGP40",
       sub: "Cold-climate Lithium Titanate battery surviving -40°C to +60°C with 25,000 cycles, paired with pulsed 35ms MEMS gas sensing.",
@@ -479,6 +679,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "Software routines have microsecond jitter; dead-time must be deterministic down to 30 ns. Low-side single-shunt sensing cannot measure phase currents during zero-voltage SVPWM vectors, causing loss of FOC observer lock and motor stall.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Ferrite Bead & High Gate Resistance Snubbing",
+            "exactDefinition": "Slow down MOSFET switching edges by increasing series gate resistors (Rg = 22\u03a9) and adding ferrite beads.",
+            "summary": "Suppresses high dv/dt ringing and prevents Miller shoot-through without changing gate driver silicon.",
+            "tradeOff": "Slower transitions increase MOSFET switching heat dissipation by 45%."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: Dedicated 3-Phase Gate Driver with Hardware Dead-Time & In-Line Shunts (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Enforce fixed hardware dead-time (50ns) with 1A active pull-down gate drive and in-line current sense amplifiers.",
+            "summary": "TI DRV8353R driver + Infineon 1.4m\u03a9 FETs + TI INA240A1 in-line current amplifiers.",
+            "tradeOff": "Requires precise Kelvin sense routing on 4-layer PCB."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Integrated Gallium Nitride (GaN) Power Stage with Embedded Core",
+            "exactDefinition": "Replace silicon MOSFETs with monolithic GaN power stages operating at 100 kHz with zero reverse recovery.",
+            "summary": "Eliminates switching losses almost entirely; reduces ESC volume by 70% with smooth high-speed motor control.",
+            "tradeOff": "Extremely sensitive to parasitic loop inductance; requires advanced micro-strip layout."
+      }
+],
     hardenedBlueprint: {
       title: "TI DRV8353R Smart Gate Driver + Infineon 1.4mΩ FETs + In-Line INA240",
       sub: "Hardware dead-time insertion (50ns) with programmable 1A pull-down gate drive and RC snubbers, eliminating Miller shoot-through.",
@@ -538,6 +765,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "A 5V pulse creates almost zero acoustic displacement in industrial steel; the sound wave dissipates in the rust layer. 1N4007 diodes have huge reverse recovery times (> 2 µs) and excessive junction capacitance (15 pF), smothering 10 MHz microvolt echoes.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: High-Voltage Diode Clamping Array",
+            "exactDefinition": "Clamp receiver input with fast Schottky diodes in anti-parallel behind a current-limiting resistor.",
+            "summary": "Protects receiver amplifier from destruction by clamping voltages to \u00b10.4V.",
+            "tradeOff": "Diode junction capacitance (15 pF) filters out high-frequency 10 MHz acoustic details; 8 mm dead-zone."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: High-Speed Depletion-Mode T/R Switch (< 20ns) + TGC Amplifier (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Isolate receiver with bidirectional depletion-mode FET switch during the -150V pulse, ramping analog gain with echo depth.",
+            "summary": "Microchip MD0100 (< 20ns turn-off) + Analog Devices AD8331 TGC amplifier resolving wall thickness to \u00b15 \u00b5m.",
+            "tradeOff": "Requires synchronized high-voltage pulser timing triggers."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Electromagnetic Acoustic Transducer (EMAT) Non-Contact Array",
+            "exactDefinition": "Generate ultrasonic shear waves directly inside pipe steel using Lorentz forces from high-field permanent magnets.",
+            "summary": "Zero acoustic couplant gel needed; measures pipe thickness through thick coating and rust layers.",
+            "tradeOff": "Requires heavy rare-earth magnets and high-current pulsed RF generators."
+      }
+],
     hardenedBlueprint: {
       title: "Microchip MD0100 Fast T/R Switch (< 20ns) + AD8331 TGC Amplifier",
       sub: "Depletion-mode FET protection switch clamping receiver to < ±2V during -150V pulse, then opening into 15Ω series resistance in 20 ns.",
@@ -597,6 +851,33 @@ export const CONTRADICTION_IDEAS: ContradictionIdea[] = [
       brutalTruth:
         "Buck converters cannot boost; when the battery sags to 9V, the 12V output collapses. Rolling-shutter webcams warp curved geometry under motion, causing feature-tracking failures. The robot loses its pose, panics, or collides with factory workers.",
     },
+        pathways: [
+      {
+            "id": "path_a",
+            "label": "Path A",
+            "name": "Path A: Dedicated Auxiliary Deep-Cycle Buffer Battery",
+            "exactDefinition": "Power onboard computer and sensors from an isolated secondary 12V battery separated from traction drive motors.",
+            "summary": "Prevents traction motor acceleration inrush sags from affecting navigation computers.",
+            "tradeOff": "Adds 12 kg battery weight and requires separate charging circuitry."
+      },
+      {
+            "id": "path_b",
+            "label": "Path B",
+            "name": "Path B: 4-Switch Buck-Boost (LT8705) + Supercapacitor Reservoir + Global Shutter (Recommended Production Standard)",
+            "recommended": true,
+            "exactDefinition": "Regulate wide 5V-40V inputs into constant 19V with supercapacitor ride-through and global-shutter optical filtering.",
+            "summary": "Analog Devices LT8705 + 3F Eaton supercapacitor hold-up (> 2.5s dropout survival) + OnSemi AR0234CS global shutter.",
+            "tradeOff": "Supercapacitor bank requires active cell balancing circuit."
+      },
+      {
+            "id": "path_c",
+            "label": "Path C",
+            "name": "Path C: Ultra-Wideband (UWB) Infrastructure-Assisted Ceiling Optical SLAM",
+            "exactDefinition": "Augment AGV SLAM with ceiling-mounted upward-facing barcode cameras and factory UWB positioning anchors.",
+            "summary": "100% immune to ground-level lighting and obstacle obstruction; sub-centimeter repeatable warehouse navigation.",
+            "tradeOff": "Requires surveying and installing active infrastructure across factory ceiling grid."
+      }
+],
     hardenedBlueprint: {
       title: "4-Switch Buck-Boost (LT8705) + Supercapacitor Reservoir + Global Shutter",
       sub: "Analog Devices LT8705 delivering constant 19V at 8A from 5V-40V inputs, backed by a 3F supercapacitor reservoir for 2.5s dropout ride-through.",

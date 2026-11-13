@@ -26,6 +26,7 @@ export default function IdeaStudioPage() {
 
   // Active Idea Selection
   const [selectedIdeaId, setSelectedIdeaId] = useState<string>("solar_microgrid");
+  const [selectedPathId, setSelectedPathId] = useState<"path_a" | "path_b" | "path_c">("path_b");
   const selectedIdea = useMemo(() => {
     return CONTRADICTION_IDEAS.find((i) => i.id === selectedIdeaId) ?? CONTRADICTION_IDEAS[0];
   }, [selectedIdeaId]);
@@ -285,52 +286,104 @@ export default function IdeaStudioPage() {
           </div>
         </div>
 
-        {/* Right Column: Single Recommended Production Blueprint (No Waste/Non-Waste Options) */}
+        {/* Right Column: Three Standardized Implementation Pathways */}
         <div className="blueprint-hero-card">
           <div className="blueprint-badge">
             <CheckCircle2 size={14} />
-            <span>SINGLE RECOMMENDED PRODUCTION BLUEPRINT</span>
+            <span>THREE STANDARDIZED IMPLEMENTATION PATHWAYS</span>
           </div>
-          <h3>{selectedIdea.hardenedBlueprint.title}</h3>
-          <p className="blueprint-sub">{selectedIdea.hardenedBlueprint.sub}</p>
 
-          <div className="metric-scorecard-row">
-            {selectedIdea.hardenedBlueprint.metrics.map((m, idx) => (
-              <div key={idx} className="metric-score-box">
-                <span className="metric-label">{m.label}</span>
-                <strong className={m.positive ? "cool" : ""}>{m.value}</strong>
-              </div>
+          {/* Pathway Tab Pills */}
+          <div className="pathway-tabs-row" role="tablist">
+            {(selectedIdea.pathways || []).map((path) => (
+              <button
+                key={path.id}
+                type="button"
+                className={`pathway-tab-btn ${selectedPathId === path.id ? "active" : ""} ${path.recommended ? "recommended" : ""}`}
+                onClick={() => setSelectedPathId(path.id)}
+                role="tab"
+                aria-selected={selectedPathId === path.id}
+              >
+                <div className="tab-top">
+                  <span className="path-label">{path.label}</span>
+                  {path.recommended && <span className="rec-badge">★ Recommended</span>}
+                </div>
+                <strong className="path-title">{path.name.split(":")[1]?.trim() || path.name}</strong>
+              </button>
             ))}
           </div>
 
-          {/* Core Silicon Components */}
-          <div className="silicon-specs-table">
-            <h5>Verified Hardware Components:</h5>
-            <div className="silicon-rows">
-              {selectedIdea.hardenedBlueprint.silicon.map((s, idx) => (
-                <div key={idx} className="silicon-row">
-                  <span className="silicon-role">{s.role}</span>
-                  <strong className="silicon-part">{s.part}</strong>
-                  <span className="silicon-spec">{s.spec}</span>
+          {/* Active Pathway Details Card */}
+          {(() => {
+            const activePath = (selectedIdea.pathways || []).find((p) => p.id === selectedPathId) || (selectedIdea.pathways || [])[1];
+            if (!activePath) return null;
+            return (
+              <div className="active-path-content">
+                <div className="path-definition-banner">
+                  <span className="def-kicker">EXACT PATH DEFINITION</span>
+                  <p className="def-text">{activePath.exactDefinition}</p>
+                </div>
+
+                <div className="path-meta-grid">
+                  <div className="path-meta-box">
+                    <span className="meta-kicker">ACTION SUMMARY</span>
+                    <p className="summary-text">{activePath.summary}</p>
+                  </div>
+                  <div className="path-meta-box warning">
+                    <span className="meta-kicker">STRATEGIC TRADE-OFF</span>
+                    <p className="tradeoff-text">{activePath.tradeOff}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Production Blueprint Specs */}
+          <div className="production-blueprint-container">
+            <div className="blueprint-sub-header">
+              <span className="blueprint-kicker">HARDENED BLUEPRINT SPECIFICATIONS (PATH B)</span>
+              <h3>{selectedIdea.hardenedBlueprint.title}</h3>
+              <p className="blueprint-sub">{selectedIdea.hardenedBlueprint.sub}</p>
+            </div>
+
+            <div className="metric-scorecard-row">
+              {selectedIdea.hardenedBlueprint.metrics.map((m, idx) => (
+                <div key={idx} className="metric-score-box">
+                  <span className="metric-label">{m.label}</span>
+                  <strong className={m.positive ? "cool" : ""}>{m.value}</strong>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Firmware Failsafe */}
-          <div className="firmware-failsafe-box">
-            <h5>Firmware & Hardware Failsafe:</h5>
-            <p>{selectedIdea.hardenedBlueprint.firmwareFailsafe}</p>
-          </div>
+            {/* Core Silicon Components */}
+            <div className="silicon-specs-table">
+              <h5>Verified Hardware Components:</h5>
+              <div className="silicon-rows">
+                {selectedIdea.hardenedBlueprint.silicon.map((s, idx) => (
+                  <div key={idx} className="silicon-row">
+                    <span className="silicon-role">{s.role}</span>
+                    <strong className="silicon-part">{s.part}</strong>
+                    <span className="silicon-spec">{s.spec}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          {/* Production Checklist */}
-          <div className="implementation-checklist">
-            <h5>Production Implementation Steps:</h5>
-            <ol>
-              {selectedIdea.hardenedBlueprint.implementationSteps.map((step, idx) => (
-                <li key={idx}>{step}</li>
-              ))}
-            </ol>
+            {/* Firmware Failsafe */}
+            <div className="firmware-failsafe-box">
+              <h5>Firmware & Hardware Failsafe:</h5>
+              <p>{selectedIdea.hardenedBlueprint.firmwareFailsafe}</p>
+            </div>
+
+            {/* Production Checklist */}
+            <div className="implementation-checklist">
+              <h5>Production Implementation Steps:</h5>
+              <ol>
+                {selectedIdea.hardenedBlueprint.implementationSteps.map((step, idx) => (
+                  <li key={idx}>{step}</li>
+                ))}
+              </ol>
+            </div>
           </div>
         </div>
       </div>

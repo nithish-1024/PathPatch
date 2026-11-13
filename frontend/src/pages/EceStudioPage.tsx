@@ -348,18 +348,36 @@ export default function EceStudioPage() {
             </div>
           )}
 
-          {/* Active Diagnostic Alerts */}
-          {simResult.activeAlerts.length > 0 && (
-            <div className="eda-alerts-card">
-              <div className="alert-head">
-                <Flame size={15} className="alert-flame" />
-                <h4>Circuit Safety Alerts</h4>
+          {/* Intelligent Circuit Diagnostics & Actionable Recommendations (Multisim / KiCad Differentiator) */}
+          {simResult.diagnostics && simResult.diagnostics.length > 0 && (
+            <div className="eda-diagnostics-deck" role="alert" aria-label="Circuit Fault Diagnostics">
+              <div className="diag-deck-header">
+                <AlertTriangle size={16} className="diag-warning-icon" />
+                <h4>Intelligent Circuit Diagnostics ({simResult.diagnostics.length})</h4>
+                <span className="diag-pill">Live First-Principles Feedback</span>
               </div>
-              <ul className="alert-list">
-                {simResult.activeAlerts.map((alt, i) => (
-                  <li key={i}>{alt}</li>
+              <div className="diag-cards-list">
+                {simResult.diagnostics.map((diag) => (
+                  <div key={diag.id} className={`diag-card ${diag.severity}`}>
+                    <div className="diag-card-top">
+                      <span className={`diag-severity-badge ${diag.severity}`}>
+                        {diag.severity.toUpperCase()}
+                      </span>
+                      <strong className="diag-card-title">{diag.title}</strong>
+                    </div>
+
+                    <div className="diag-section why">
+                      <span className="diag-label">🔍 Why this happened:</span>
+                      <p>{diag.whyThisHappened}</p>
+                    </div>
+
+                    <div className="diag-section fix">
+                      <span className="diag-label">💡 Recommended Action:</span>
+                      <p>{diag.recommendation}</p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 

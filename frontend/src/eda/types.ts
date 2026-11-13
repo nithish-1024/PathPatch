@@ -116,6 +116,15 @@ export interface MultimeterState {
   leadBlackNode: string | null;
 }
 
+export interface CircuitDiagnostic {
+  id: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  componentId?: string;
+  whyThisHappened: string;
+  recommendation: string;
+}
+
 export interface SimulationResult {
   time: number;
   step: number;
@@ -129,4 +138,5 @@ export interface SimulationResult {
   logicWaveforms: Record<string, (0 | 1)[]>;
   thermalMap: Record<string, number>;
   activeAlerts: string[];
+  diagnostics: CircuitDiagnostic[];
 }

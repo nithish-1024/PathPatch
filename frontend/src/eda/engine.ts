@@ -1,4 +1,5 @@
 import type {
+  CircuitDiagnostic,
   EdaPlacedComponent,
   EdaWire,
   SimulationResult,
@@ -548,6 +549,112 @@ export class EdaSimulationEngine {
       digitalTracks.OUT.push((cyc >= 10 ? 1 : 0));
     }
 
+    // 7. Intelligent Circuit Diagnostics & Actionable Recommendations
+    const diagnostics: CircuitDiagnostic[] = [];
+
+    // Diagnostic 1: VCC directly shorted to GND
+    if (vccNet && gndNet && vccNet === gndNet) {
+      diagnostics.push({
+        id: "diag_short_vcc_gnd",
+        severity: "critical",
+        title: "CRITICAL SHORT CIRCUIT: VCC Connected Directly to GND",
+        whyThisHappened:
+          "The positive power rail (+5V/+12V) is tied directly to Ground with zero load resistance. According to Ohm's Law (I = V / R), this demands infinite current, causing immediate power supply collapse and thermal burnout.",
+        recommendation:
+          "Disconnect the direct wire connecting Power to Ground. Place an electrical load (such as a resistor, motor, IC, or LED circuit) between the power rails.",
+      });
+      activeAlerts.push("CRITICAL SHORT CIRCUIT: VCC directly shorted to GND!");
+    }
+
+    // Diagnostic 2: Component-level fault inspection
+    components.forEach((c) => {
+      // Reversed Electrolytic Capacitor
+      if (c.type === "CAPACITOR_ELECTROLYTIC") {
+        const posNet = pinToNet.get(`${c.id}:pos`);
+        const negNet = pinToNet.get(`${c.id}:neg`);
+        const vp = posNet ? (nodeVoltages[posNet] ?? 0) : 0;
+        const vn = negNet ? (nodeVoltages[negNet] ?? 0) : 0;
+        if (vn - vp > 0.4) {
+          diagnostics.push({
+            id: `diag_rev_cap_${c.id}`,
+            severity: "critical",
+            title: `REVERSED POLARITY: Electrolytic Capacitor (${c.designator || c.name})`,
+            componentId: c.id,
+            whyThisHappened: `Capacitor ${c.name} has its negative (-) pin connected to a higher potential (${vn.toFixed(1)}V) than its positive (+) pin (${vp.toFixed(1)}V). In polarized aluminum electrolytic capacitors, reverse bias destroys the microscopic dielectric oxide layer, releasing hydrogen gas and causing thermal rupture.`,
+            recommendation:
+              "Rotate or reconnect the capacitor so that the positive (+) lead connects toward the positive supply rail and the white-striped negative (-) lead faces Ground.",
+          });
+          activeAlerts.push(`REVERSED POLARITY: ${c.name} negative pin at ${vn.toFixed(1)}V > positive pin ${vp.toFixed(1)}V!`);
+        }
+      }
+
+      // Overcurrent Unballasted LED
+      if (c.type === "LED") {
+        const aNet = pinToNet.get(`${c.id}:anode`);
+        const kNet = pinToNet.get(`${c.id}:cathode`);
+        const va = aNet ? (nodeVoltages[aNet] ?? 0) : 0;
+        const vk = kNet ? (nodeVoltages[kNet] ?? 0) : 0;
+        const vDiff = va - vk;
+        if (vDiff >= 3.0 && aNet === vccNet && kNet === gndNet) {
+          diagnostics.push({
+            id: `diag_led_burn_${c.id}`,
+            severity: "critical",
+            title: `OVERCURRENT: Unballasted LED Connected to Power (${c.designator || c.name})`,
+            componentId: c.id,
+            whyThisHappened: `LED ${c.name} is connected directly across the supply rails (${vDiff.toFixed(1)}V) with no ballast resistor. Because the diode dynamic resistance drops to near zero above its 2.0V threshold, current exceeds 120mA (safe limit: 20mA), causing instantaneous thermal burnout.`,
+            recommendation:
+              "Insert a 330Ω to 1kΩ current-limiting resistor in series with the LED anode or cathode (R = (Vsupply - 2.0V) / 0.015A).",
+          });
+          activeAlerts.push(`OVERCURRENT: ${c.name} has no current-limiting resistor!`);
+        }
+      }
+
+      // Unprotected Inductive Kickback
+      if (c.type === "INDUCTOR" || c.type === "DC_MOTOR") {
+        const hasDiodeSnubber = components.some(
+          (other) =>
+            (other.type === "DIODE_RECTIFIER" || other.type === "DIODE_1N4148") &&
+            wires.some(
+              (w) =>
+                (w.fromCompId === c.id && w.toCompId === other.id) ||
+                (w.fromCompId === other.id && w.toCompId === c.id)
+            )
+        );
+        if (!hasDiodeSnubber && wires.some((w) => w.fromCompId === c.id || w.toCompId === c.id)) {
+          diagnostics.push({
+            id: `diag_flyback_${c.id}`,
+            severity: "warning",
+            title: `UNPROTECTED INDUCTIVE FLYBACK: (${c.designator || c.name})`,
+            componentId: c.id,
+            whyThisHappened: `Inductive component ${c.name} is connected without an anti-parallel flyback protection diode. When coil current is interrupted by a switch or transistor, the collapsing magnetic field generates a large reverse voltage spike (V = -L di/dt > 60V) that arcs across contacts and destroys driver semiconductors.`,
+            recommendation:
+              "Connect a 1N4007 or 1N4148 diode in anti-parallel (cathode facing +VCC, anode facing the switch node) across the motor/inductor terminals.",
+          });
+        }
+      }
+
+      // Floating Reset Pin on ICs
+      if (c.type === "IC_555") {
+        const rstPinKey = `${c.id}:p4_rst`;
+        const hasWire = wires.some(
+          (w) =>
+            `${w.fromCompId}:${w.fromPinId}` === rstPinKey ||
+            `${w.toCompId}:${w.toPinId}` === rstPinKey
+        );
+        if (!hasWire) {
+          diagnostics.push({
+            id: `diag_rst_${c.id}`,
+            severity: "info",
+            title: `FLOATING RESET PIN: NE555 Timer (${c.designator || c.name})`,
+            componentId: c.id,
+            whyThisHappened: `Pin 4 (active-low RESET) on ${c.name} is left disconnected. In CMOS and bipolar timers, high input impedance picks up stray electromagnetic interference, causing intermittent resets and unstable timing pulses.`,
+            recommendation:
+              "Connect Pin 4 (RESET) directly to Pin 8 (VCC) for normal continuous astable operation, or pull it high with a 10kΩ resistor.",
+          });
+        }
+      }
+    });
+
     return {
       time: this.time,
       step: this.stepCount,
@@ -561,6 +668,7 @@ export class EdaSimulationEngine {
       logicWaveforms: digitalTracks,
       thermalMap,
       activeAlerts,
+      diagnostics,
     };
   }
 }
