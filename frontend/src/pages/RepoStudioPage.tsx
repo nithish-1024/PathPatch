@@ -54,6 +54,15 @@ export default function RepoStudioPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to scan repository. Please verify the URL is public.";
       setScanError(msg);
+      // Guarantee the 3D model & specimen remain fully accessible even if remote network/rate-limit fails
+      if (!run) {
+        try {
+          const fallbackRun = await api.demo("cs_repo");
+          setRun(fallbackRun);
+        } catch {
+          // Keep loading state resolved
+        }
+      }
     } finally {
       setIsScanning(false);
       setLoading(false);
@@ -61,7 +70,13 @@ export default function RepoStudioPage() {
   };
 
   useEffect(() => {
-    // Automatically perform initial scan of the target repository on load
+    // Automatically initialize with verified demo run so 3D model loads instantly
+    api.demo("cs_repo").then((data) => {
+      setRun(data);
+      setLoading(false);
+    }).catch(() => {});
+
+    // Then perform live scan of geosmin
     handleAnalyzeRepo(undefined, "https://github.com/nithish-1024/geosmin");
   }, []);
 
@@ -233,13 +248,20 @@ export default function RepoStudioPage() {
               </span>
             </div>
 
-            {run && (
+            {run ? (
               <Deferred3DViewport
                 run={run}
                 plan={selectedPlan}
                 layer={layer}
                 dark={true}
               />
+            ) : (
+              <div className="canvas-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#101615" }}>
+                <div style={{ textAlign: "center", color: "var(--muted)" }}>
+                  <Loader2 size={32} className="spin-animate" style={{ margin: "0 auto 12px" }} />
+                  <p style={{ fontSize: "12px", fontFamily: "var(--mono)" }}>INITIALIZING 3D CODE NEBULA...</p>
+                </div>
+              </div>
             )}
           </div>
 

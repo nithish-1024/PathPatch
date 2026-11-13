@@ -28,7 +28,7 @@ function ViewportPlaceholder() {
 
 export default function Deferred3DViewport(props: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(true);
 
   useEffect(() => {
     if (shouldLoad || !host.current) return;

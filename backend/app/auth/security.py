@@ -76,6 +76,41 @@ def get_current_user(
     return user
 
 
+def get_current_user_or_guest(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> User:
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        try:
+            payload = jwt.decode(token, get_secret_key(), algorithms=[ALGORITHM])
+            user_id = int(payload["sub"])
+            user = db.get(User, user_id)
+            if user is not None:
+                return user
+        except Exception:
+            pass
+
+    # Unauthenticated / guest access for educational exploration and demos
+    guest = db.query(User).filter(User.email == "demo@dtlab.internal").first()
+    if not guest:
+        guest = User(
+            email="demo@dtlab.internal",
+            password_hash=hash_password("DemoPassword123!"),
+            full_name="Demo Guest",
+            department="Cross-Disciplinary",
+            created_at=utc_now(),
+        )
+        db.add(guest)
+        try:
+            db.commit()
+            db.refresh(guest)
+        except Exception:
+            db.rollback()
+            guest = db.query(User).filter(User.email == "demo@dtlab.internal").first() or guest
+    return guest
+
+
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:

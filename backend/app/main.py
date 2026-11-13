@@ -18,6 +18,7 @@ from app.auth.security import (
     create_access_token,
     get_client_ip,
     get_current_user,
+    get_current_user_or_guest,
     get_secret_key,
     hash_password,
     is_cookie_secure,
@@ -349,7 +350,7 @@ def list_runs(db: Session = Depends(get_db), user: User = Depends(get_current_us
 
 
 @app.post("/api/v1/upskiller/analyze", response_model=RunResponse, status_code=201)
-def create_analysis(payload: AnalyzeRequest, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> RunResponse:
+def create_analysis(payload: AnalyzeRequest, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user_or_guest)) -> RunResponse:
     verify_csrf(request)
     client_ip = get_client_ip(request)
     check_rate_limit(db, f"analyze:{user.id}:{client_ip}", max_requests=20, window_seconds=300)
