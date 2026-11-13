@@ -25,10 +25,10 @@ export default function Navbar({
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/repo", label: "1. Repo", icon: Layers, tag: "AST & OSV" },
-    { path: "/ece", label: "2. ECE", icon: Cpu, tag: "PCB & Multisim" },
+    { path: "/ece", label: "2. Circuits", icon: Cpu, tag: "Tinkercad & SPICE" },
     { path: "/civil", label: "3. Civil", icon: HardHat, tag: "Truss [K]{u}" },
     { path: "/mechanical", label: "4. Mechanical", icon: Activity, tag: "Euler-Bernoulli" },
-    { path: "/idea", label: "5. Your Idea", icon: Cpu, tag: "Dual-Brain" },
+    { path: "/idea", label: "5. Architecture", icon: Cpu, tag: "5-Stage Pipeline" },
   ];
 
   return (

@@ -205,10 +205,10 @@ export default function App() {
               </div>
               <div className="footer-links">
                 <button type="button" onClick={() => navigate("/repo")}>1. Repo AST</button>
-                <button type="button" onClick={() => navigate("/ece")}>2. ECE & Multisim</button>
+                <button type="button" onClick={() => navigate("/ece")}>2. Circuits (Tinkercad)</button>
                 <button type="button" onClick={() => navigate("/civil")}>3. Civil Truss</button>
                 <button type="button" onClick={() => navigate("/mechanical")}>4. Mechanical Beam</button>
-                <button type="button" onClick={() => navigate("/idea")}>5. Your Idea</button>
+                <button type="button" onClick={() => navigate("/idea")}>5. Architecture</button>
               </div>
               <div className="footer-meta">
                 <span>FIRST PRINCIPLES · 100% DETERMINISTIC PHYSICS</span>

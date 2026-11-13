@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -9,12 +10,14 @@ import {
   Info,
   Layers,
   Maximize2,
+  Play,
   Power,
   RotateCcw,
   Search,
   Send,
   Sliders,
   Sparkles,
+  Square,
   Thermometer,
   Zap,
 } from "lucide-react";
@@ -30,7 +33,7 @@ import type {
   ViewLayer,
 } from "../types/patchpath";
 
-// 14+ Component VNRVJIET ECE Hardware Catalog
+// 14+ Component Hardware Catalog
 const ECE_CATALOG = [
   {
     id: "LM7805_LINEAR",
@@ -54,7 +57,7 @@ const ECE_CATALOG = [
     kind: "regulator",
     specs: "Vout: 5V, Efficiency: 94%, RθJA: 25 °C/W",
     weight: "1.9 g",
-    description: "Switched-mode DC-DC buck converter. Eliminates bulky heatsinks and runs cool at 34°C.",
+    description: "Switched-mode DC-DC buck converter. Eliminates bulky heatsinks and runs cool at 33°C.",
     risk: "Negligible heat. Higher switching ripple (~50 mV) requires 0.1µF decoupling cap.",
     fix: "Optimal choice for battery and high-differential power rails.",
     defaultVin: 12,
@@ -63,13 +66,13 @@ const ECE_CATALOG = [
   {
     id: "TRANSFORMER_STEPDOWN",
     name: "Iron-Core Transformer",
-    category: "Power & AC-DC",
+    category: "Power",
     footprint: "EI-30 Chassis / PCB Mount",
     kind: "transformer",
     specs: "230V AC to 12V AC, 50 Hz, 1A",
     weight: "350 g",
-    description: "Traditional magnetic iron-core step-down transformer. Provides galvanic isolation but is heavy and bulky.",
-    risk: "Makes PCB 350g heavier and takes up 45 cm³ of enclosure space.",
+    description: "Traditional magnetic iron-core step-down transformer with galvanic isolation.",
+    risk: "Bulky (350g) and consumes 45 cm³ of enclosure volume.",
     fix: "Replace with Capacitive Dropper for compact, low-power IoT circuits.",
     defaultVin: 230,
     defaultIload: 30,
@@ -77,7 +80,7 @@ const ECE_CATALOG = [
   {
     id: "CAPACITIVE_DROPPER",
     name: "Capacitive Dropper (X2)",
-    category: "Power & AC-DC",
+    category: "Power",
     footprint: "X2 Radial Safety Film (15mm)",
     kind: "capacitive_dropper",
     specs: "0.47 µF X2, 275V AC, Inrush: 100Ω",
@@ -98,49 +101,49 @@ const ECE_CATALOG = [
     weight: "0.2 g",
     description: "General-purpose small-signal NPN bipolar junction transistor for switching and amplification.",
     risk: "Vbe drops by -2.1 mV/°C as temperature rises, risking thermal biasing shift.",
-    fix: "Add emitter degeneration resistor (Re) to stabilize operating point.",
-    defaultVin: 9,
+    fix: "Add emitter degeneration resistor (Re = 100Ω) to stabilize operating point.",
+    defaultVin: 5,
     defaultIload: 50,
   },
   {
     id: "MOSFET_IRFZ44N",
-    name: "IRFZ44N Power MOSFET",
+    name: "IRFZ44N N-Channel MOSFET",
     category: "Semiconductors",
-    footprint: "TO-220AB Power Package",
+    footprint: "TO-220 Power Package",
     kind: "transistor",
     specs: "Vds: 55V, Id: 49A, Rds(on): 17.5 mΩ",
-    weight: "2.5 g",
-    description: "N-channel HEXFET Power MOSFET for high-efficiency high-current load switching.",
-    risk: "Gate capacitance requires low-impedance driver to prevent slow switching losses.",
-    fix: "Ensure Vgs > 10V for full saturation.",
+    weight: "2.0 g",
+    description: "High-current N-channel power MOSFET for DC motor PWM and high-speed power switching.",
+    risk: "Gate threshold Vgs(th) requires 10V for full saturation; logic-level 3.3V drive will overheat.",
+    fix: "Use TC4427 dedicated gate driver IC or logic-level IRLZ44N variant.",
     defaultVin: 12,
-    defaultIload: 800,
+    defaultIload: 2000,
   },
   {
     id: "TIMER_NE555",
-    name: "NE555 Precision Timer",
-    category: "Integrated Circuits",
-    footprint: "DIP-8 Dual In-Line",
+    name: "NE555 Precision Timer IC",
+    category: "ICs",
+    footprint: "DIP-8 Through-Hole",
     kind: "ic",
-    specs: "Vcc: 4.5V - 16V, Max Freq: 500 kHz",
-    weight: "0.8 g",
-    description: "Industry-standard astable multivibrator and PWM generator. Pulse width controlled by external RC.",
-    risk: "Ground bounce spikes on output switching transition.",
-    fix: "Place 0.01µF capacitor on Pin 5 (Control Voltage) to ground.",
+    specs: "Supply: 4.5V - 16V, Max Freq: 500 kHz",
+    weight: "0.5 g",
+    description: "Classic monostable and astable multivibrator for PWM generation, clock pulses, and time delays.",
+    risk: "Current shoot-through spike (~300 mA for 100 ns) occurs during output transitions.",
+    fix: "Decouple Pin 5 (Control) with 0.01µF and Pin 8 (Vcc) with 10µF + 0.1µF capacitors.",
     defaultVin: 5,
-    defaultIload: 60,
+    defaultIload: 15,
   },
   {
-    id: "OPAMP_IC741",
-    name: "LM741 Operational Amplifier",
-    category: "Integrated Circuits",
-    footprint: "DIP-8 Dual In-Line",
+    id: "OPAMP_LM741",
+    name: "LM741 General Purpose Op-Amp",
+    category: "ICs",
+    footprint: "DIP-8 Through-Hole",
     kind: "ic",
-    specs: "Gain Bandwidth: 1 MHz, Slew: 0.5 V/µs",
-    weight: "0.8 g",
-    description: "Internally compensated general-purpose op-amp for summing, active filtering, and instrumentation.",
-    risk: "Slew rate (0.5 V/µs) limits high-frequency sinusoidal response.",
-    fix: "Operate within 10 kHz bandwidth or use negative feedback.",
+    specs: "Supply: ±15V (Dual), Slew Rate: 0.5 V/µs",
+    weight: "0.5 g",
+    description: "Industry-standard single operational amplifier with internal frequency compensation.",
+    risk: "Output cannot swing rail-to-rail (typically limited to Vcc - 2V).",
+    fix: "For single 5V rails, replace with modern rail-to-rail MCP6002 op-amp.",
     defaultVin: 12,
     defaultIload: 20,
   },
@@ -164,19 +167,19 @@ const ECE_CATALOG = [
     category: "Sensors",
     footprint: "4-pin Single Row",
     kind: "sensor",
-    specs: "Temp: 0-50°C (±2°C), RH: 20-90%",
-    weight: "1.5 g",
-    description: "Calibrated digital temperature and relative humidity sensor with single-wire serial output.",
-    risk: "Data line requires 4.7kΩ to 10kΩ pull-up resistor to VCC.",
-    fix: "Ensure pull-up is populated to avoid floating bus timeouts.",
+    specs: "0-50°C (±2°C), 20-90% RH (±5%)",
+    weight: "2.5 g",
+    description: "Digital composite temperature and relative humidity sensor with single-wire interface.",
+    risk: "Requires 1-second interval between reads; polling faster causes self-heating errors.",
+    fix: "Pull-up resistor of 4.7kΩ to 10kΩ required on data output pin.",
     defaultVin: 5,
     defaultIload: 2,
   },
   {
-    id: "FILTER_CAP_1000UF",
+    id: "SMOOTHING_CAP_1000UF",
     name: "1000µF 25V Electrolytic Cap",
     category: "Passives",
-    footprint: "Radial Can 10×16 mm",
+    footprint: "Radial Can (10x16mm)",
     kind: "capacitor",
     specs: "Cap: 1000 µF, ESR: 0.08 Ω, 25V",
     weight: "4.5 g",
@@ -231,34 +234,43 @@ const ECE_CATALOG = [
 ];
 
 export default function EceStudioPage() {
-  // Studio State
   const [run, setRun] = useState<AnalysisRun | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedPlanId, setSelectedPlanId] = useState("plan_b");
   const [layer, setLayer] = useState<ViewLayer>("overview");
-  const [isPcb, setIsPcb] = useState(false); // Toggle: FR-4 PCB vs Breadboard
+
+  // Tinkercad EDA Toolbar State
+  const [simRunning, setSimRunning] = useState(true); // [▶ Start Simulation]
+  const [viewMode, setViewMode] = useState<"breadboard" | "schematic" | "pcb">("breadboard");
+  const [wireColor, setWireColor] = useState<"red" | "black" | "green" | "blue" | "yellow">("red");
+  const [dmmMode, setDmmMode] = useState<"V" | "mA" | "W" | "degC">("V");
+
+  // Interactive In-Canvas Controls
+  const [switchClosed, setSwitchClosed] = useState(true); // SPST Rocker Switch
+  const [potRatio, setPotRatio] = useState(0.65); // Potentiometer Load (0.0 to 1.0)
+  const [vin, setVin] = useState(12.0); // DC Power Supply Voltage
+  const [tAmbient, setTAmbient] = useState(30); // Ambient Temp (°C)
+  const [traceWidthMm, setTraceWidthMm] = useState(1.0); // PCB Trace Width
+
+  // Active Regulator Socket: LM7805 vs. TSR-1 Buck Module
+  const [isBuckInstalled, setIsBuckInstalled] = useState(false);
+
+  // Component Drawer
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-
-  // Active Component & Physical Sliders
-  const [activeComponent, setActiveComponent] = useState(ECE_CATALOG[0]);
-  const [vin, setVin] = useState(12.0);
-  const [iload, setIload] = useState(350); // mA
-  const [tAmbient, setTAmbient] = useState(30); // °C
-  const [traceWidthMm, setTraceWidthMm] = useState(1.0); // mm
+  const [selectedDrawerPart, setSelectedDrawerPart] = useState(ECE_CATALOG[0]);
 
   // Copilot Q&A
   const [question, setQuestion] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [chatLog, setChatLog] = useState<Array<{ q: string; a: string; source: string }>>([
     {
-      q: "Why does the linear regulator get so hot?",
-      a: "The LM7805 drops (12V - 5V) = 7V across its internal transistor. At 350mA, it burns 2.45W of pure waste heat, driving its junction temperature to 118.2°C! Switching to a Buck module (Plan B) recovers 94% efficiency and runs at just 34°C.",
-      source: "physics_rule_engine",
+      q: "Why is the LM7805 getting burning hot?",
+      a: "The LM7805 drops (12V - 5V) = 7V across its internal pass transistor. At 350mA, it burns 2.45W of pure waste heat, driving its junction temperature to 118.2°C! Applying the recommended TSR-1 Buck Module recovers 94% efficiency and runs cool at just 32.8°C.",
+      source: "circuit_engine",
     },
   ]);
 
-  // Load baseline demo run on mount
+  // Load Seed Run
   useEffect(() => {
     let mounted = true;
     api
@@ -277,125 +289,134 @@ export default function EceStudioPage() {
     };
   }, []);
 
+  // First-Principles Multisim Simulation Calculations
+  const sim = useMemo(() => {
+    if (!simRunning || !switchClosed) {
+      return {
+        vOut: 0.0,
+        iLoadMa: 0.0,
+        powerLossW: 0.0,
+        junctionTempC: tAmbient,
+        isThermalFault: false,
+        ledBrightness: 0.0,
+        efficiencyPercent: 0.0,
+        traceTempRiseC: 0.0,
+        dmmText: "0.00 V",
+      };
+    }
+
+    // Effective Load Resistance governed by potentiometer: 10Ω base + (1 - ratio)*100Ω
+    const rLoad = 10.0 + (1.0 - potRatio) * 100.0;
+    const vOutNominal = 5.0;
+    const iLoadA = vOutNominal / rLoad; // e.g., 5.0V / 14.3Ω ≈ 0.350 A (350 mA)
+    const iLoadMa = Math.round(iLoadA * 1000);
+
+    let powerLossW = 0.0;
+    let junctionTempC = tAmbient;
+    let efficiencyPercent = 0.0;
+
+    if (!isBuckInstalled) {
+      // LM7805 Linear Regulator
+      const vDrop = Math.max(0, vin - vOutNominal);
+      powerLossW = vDrop * iLoadA;
+      const rThetaJA = 36.0; // °C/W
+      junctionTempC = tAmbient + powerLossW * rThetaJA;
+      efficiencyPercent = vin > 0 ? (vOutNominal / vin) * 100 : 0;
+    } else {
+      // TSR-1 2450 Buck Converter
+      efficiencyPercent = 94.0;
+      const pOut = vOutNominal * iLoadA;
+      powerLossW = pOut * ((100.0 - efficiencyPercent) / efficiencyPercent);
+      const rThetaJA = 25.0; // °C/W
+      junctionTempC = tAmbient + powerLossW * rThetaJA;
+    }
+
+    // IPC-2221 PCB Trace Temp Rise
+    const areaSqMils = traceWidthMm * 39.37 * 1.378; // 1oz copper
+    const deltaTTrace = 0.048 * Math.pow(iLoadA, 1.15) * Math.pow(areaSqMils, -0.44) * 100;
+
+    // LED Luminescence
+    const vLedF = 2.0;
+    const rBallast = 220.0;
+    const iLedMa = Math.max(0, ((vOutNominal - vLedF) / rBallast) * 1000);
+    const ledBrightness = Math.min(1.0, iLedMa / 20.0);
+
+    const isThermalFault = junctionTempC > 100.0;
+
+    // Digital Multimeter Readout Formatting
+    let dmmText = "";
+    if (dmmMode === "V") dmmText = `${vOutNominal.toFixed(2)} V`;
+    else if (dmmMode === "mA") dmmText = `${iLoadMa} mA`;
+    else if (dmmMode === "W") dmmText = `${powerLossW.toFixed(2)} W`;
+    else dmmText = `${junctionTempC.toFixed(1)} °C`;
+
+    return {
+      vOut: vOutNominal,
+      iLoadMa,
+      powerLossW,
+      junctionTempC,
+      isThermalFault,
+      ledBrightness,
+      efficiencyPercent,
+      traceTempRiseC: deltaTTrace,
+      dmmText,
+    };
+  }, [simRunning, switchClosed, potRatio, vin, tAmbient, isBuckInstalled, traceWidthMm, dmmMode]);
+
   // Filter Catalog
   const filteredCatalog = useMemo(() => {
-    return ECE_CATALOG.filter((comp) => {
+    return ECE_CATALOG.filter((part) => {
+      const matchCategory = selectedCategory === "All" || part.category === selectedCategory;
       const matchSearch =
-        comp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        comp.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        comp.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchCat = selectedCategory === "All" || comp.category === selectedCategory;
-      return matchSearch && matchCat;
+        part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        part.footprint.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        part.specs.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCategory && matchSearch;
     });
   }, [searchQuery, selectedCategory]);
 
-  const categories = ["All", "Regulators", "Power & AC-DC", "Semiconductors", "Integrated Circuits", "Passives", "Microcontrollers", "Sensors"];
-
-  // Live Multisim Physics Calculations
-  const physics = useMemo(() => {
-    const vOut = 5.0;
-    const iLoadA = iload / 1000.0;
-    const isLinear = activeComponent.id === "LM7805_LINEAR";
-    const isBuck = activeComponent.id === "BUCK_CONVERTER_TSR1" || selectedPlanId === "plan_b";
-    const isDropper = activeComponent.id === "CAPACITIVE_DROPPER";
-    const isTransformer = activeComponent.id === "TRANSFORMER_STEPDOWN";
-
-    let vDrop = Math.max(0, vin - vOut);
-    let powerLossW = isLinear ? vDrop * iLoadA : isBuck ? vOut * iLoadA * (1 - 0.94) / 0.94 : 0.05;
-    let rThetaJa = isLinear ? (selectedPlanId === "plan_a" ? 22.0 : 36.0) : 25.0;
-    let tJunction = tAmbient + powerLossW * rThetaJa;
-    let isThermalFault = isLinear && tJunction > 100.0;
-
-    // Capacitive Dropper calculations
-    const freqHz = 50.0;
-    const cDropperUf = 0.47;
-    const xcOhm = 1.0 / (2.0 * Math.PI * freqHz * (cDropperUf * 1e-6));
-    const maxDropperMa = ((vin / xcOhm) * 1000.0) * 0.9;
-
-    // IPC-2221 PCB Trace heating
-    // I = k * ΔT^0.44 * A^0.725 -> ΔT = (I / (k * A^0.725))^(1/0.44)
-    const traceOz = 1.0;
-    const traceThicknessMil = traceOz * 1.378; // mil
-    const traceWidthMil = (traceWidthMm / 0.0254);
-    const traceAreaMil2 = traceWidthMil * traceThicknessMil;
-    const k = 0.048; // External layer
-    let pcbTraceDeltaT = 0.5;
-    if (traceAreaMil2 > 0) {
-      pcbTraceDeltaT = Math.pow(iLoadA / (k * Math.pow(traceAreaMil2, 0.725)), 1.0 / 0.44);
-    }
-    const isTraceOverheated = pcbTraceDeltaT > 30.0;
-
-    return {
-      vIn: vin,
-      vOut: vOut,
-      iLoadA,
-      vDrop,
-      powerLossW,
-      tJunction,
-      isThermalFault,
-      xcOhm,
-      maxDropperMa,
-      isDropper,
-      isTransformer,
-      traceWidthMm,
-      pcbTraceDeltaT,
-      isTraceOverheated,
-    };
-  }, [vin, iload, tAmbient, activeComponent, selectedPlanId, traceWidthMm]);
-
-  // Handle Component Swap
-  const handleSelectComponent = (comp: typeof ECE_CATALOG[0]) => {
-    setActiveComponent(comp);
-    if (comp.defaultVin) setVin(comp.defaultVin);
-    if (comp.defaultIload) setIload(comp.defaultIload);
-
-    // Call live preview calculation
-    api
-      .preview(
-        `ECE Circuit: ${comp.name}`,
-        `Testing ${comp.name} at Vin=${comp.defaultVin ?? vin}V, Iload=${comp.defaultIload ?? iload}mA`,
-        "ece",
-        "circuit",
-        {
-          vin: comp.defaultVin ?? vin,
-          vout: 5.0,
-          iload: (comp.defaultIload ?? iload) / 1000.0,
-          iload_a: (comp.defaultIload ?? iload) / 1000.0,
-          ambient_c: tAmbient,
-          t_ambient: tAmbient,
-          component_id: comp.id,
-        }
-      )
-      .then((updatedRun) => {
-        setRun(updatedRun);
-      })
-      .catch(() => {});
-  };
+  const categories = ["All", "Regulators", "Power", "Semiconductors", "ICs", "Passives", "Sensors", "Microcontrollers"];
 
   // Submit Question to Copilot
   const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
-    const qText = question.trim();
+    const q = question.trim();
     setQuestion("");
     setCopilotLoading(true);
 
     try {
-      const res = await api.ask("circuit", qText, {
-        active_component: activeComponent.name,
-        vin: physics.vIn,
-        iload_ma: iload,
-        t_junction: physics.tJunction,
-        power_loss_w: physics.powerLossW,
-      });
-      setChatLog((prev) => [...prev, { q: qText, a: res.answer, source: res.source }]);
+      const res = await api.ask(
+        "circuit",
+        q,
+        {
+          vin,
+          vout: 5.0,
+          iload_a: sim.iLoadMa / 1000.0,
+          ambient_c: tAmbient,
+          component_id: isBuckInstalled ? "BUCK_CONVERTER_TSR1" : "LM7805_LINEAR",
+        },
+        run?.id ?? "demo"
+      );
+      setChatLog((prev) => [
+        ...prev,
+        {
+          q,
+          a: res.answer,
+          source: res.source,
+        },
+      ]);
     } catch {
       setChatLog((prev) => [
         ...prev,
         {
-          q: qText,
-          a: `In ${activeComponent.name}, current flowing through the device creates I²R losses. When Vin rises to ${physics.vIn}V, power dissipated reaches ${physics.powerLossW.toFixed(2)}W, warming the junction to ${physics.tJunction.toFixed(1)}°C.`,
-          source: "physics_rule_engine",
+          q,
+          a: `Calculated from Multisim first-principles: At Vin=${vin}V and Iload=${sim.iLoadMa}mA, regulator power loss is ${sim.powerLossW.toFixed(2)}W. Junction temperature is ${sim.junctionTempC.toFixed(1)}°C. ${
+            sim.isThermalFault
+              ? "The LM7805 is exceeding safe operating limits (Tj > 100°C). Swap to the TSR-1 Buck Module to drop temperatures down to 33°C."
+              : "The circuit is currently operating well within thermal safety margins."
+          }`,
+          source: "physics_engine",
         },
       ]);
     } finally {
@@ -403,415 +424,519 @@ export default function EceStudioPage() {
     }
   };
 
-  const selectedPlan: CandidatePlan = useMemo(() => {
-    return (
-      run?.candidate_plans_json.find((p) => p.id === selectedPlanId) ?? {
-        id: "plan_b",
-        label: "B",
-        name: "Plan B: TSR-1 Switched Buck Module",
-        recommended: true,
-        summary: "Replace LM7805 with TSR-1 switching regulator (94% efficiency, 34°C).",
-        reason: "Eliminates thermal runaway and preserves PCB copper pad life.",
-        evidence: ["Efficiency rises to 94%", "Junction temp drops from 118°C to 34°C"],
-        risks: ["Requires 0.1µF decoupling cap to filter 50mV switching ripple"],
-        evidence_status: "Verified in MNA simulation",
-        estimated_scope: "Pin-compatible drop-in replacement",
-      }
-    );
-  }, [run, selectedPlanId]);
-
   return (
-    <div className="ece-studio-page">
-      {/* Studio Header Bar */}
-      <div className="studio-top-bar">
-        <div className="bar-left">
-          <div className="bar-title-row">
-            <span className="domain-chip ece">ECE CORE LAB</span>
-            <h1 className="studio-heading">Interactive Circuit & PCB Fabrication Studio</h1>
-          </div>
-          <p className="studio-tagline">
-            Multisim MNA simulation + KiCad PCB fabrication checks. Pick components, adjust voltage & temperature, and watch live thermal runaway in 3D.
-          </p>
-        </div>
+    <div className="ece-studio-shell">
+      {/* 1. TINKERCAD / MULTISIM TOP TOOLBAR */}
+      <section className="eda-toolbar">
+        <div className="eda-toolbar-left">
+          {/* Start/Stop Simulation Button */}
+          <button
+            type="button"
+            className={`btn-sim-toggle ${simRunning ? "running" : "stopped"}`}
+            onClick={() => setSimRunning(!simRunning)}
+            title={simRunning ? "Pause Circuit Simulation" : "Start Real-Time Circuit Simulation"}
+          >
+            {simRunning ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+            <span>{simRunning ? "Stop Simulation" : "Start Simulation"}</span>
+            <span className={`sim-pulse-dot ${simRunning ? "active" : ""}`} />
+          </button>
 
-        <div className="bar-right">
-          {/* PCB vs Breadboard Mode Toggle */}
-          <div className="view-mode-toggle" role="group" aria-label="Board View Mode">
+          {/* View Mode Switcher: Breadboard / Schematic / PCB */}
+          <div className="eda-view-group" role="group" aria-label="View Mode">
             <button
               type="button"
-              className={`toggle-btn ${!isPcb ? "active" : ""}`}
-              onClick={() => setIsPcb(false)}
+              className={`view-btn ${viewMode === "breadboard" ? "active" : ""}`}
+              onClick={() => setViewMode("breadboard")}
             >
-              <span>⚪ Breadboard</span>
+              ⚪ Solderless Breadboard
             </button>
             <button
               type="button"
-              className={`toggle-btn ${isPcb ? "active" : ""}`}
-              onClick={() => setIsPcb(true)}
+              className={`view-btn ${viewMode === "schematic" ? "active" : ""}`}
+              onClick={() => setViewMode("schematic")}
             >
-              <span>🟢 Soldered FR-4 PCB</span>
+              📐 Schematic View
+            </button>
+            <button
+              type="button"
+              className={`view-btn ${viewMode === "pcb" ? "active" : ""}`}
+              onClick={() => setViewMode("pcb")}
+            >
+              🟢 Soldered FR-4 PCB
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Main 2-Column Workbench */}
-      <div className="studio-workbench-grid">
-        {/* LEFT COLUMN: 3D Viewport + Component Drawer + Physical Sliders */}
-        <div className="studio-left-column">
-          {/* 3D WebGL Viewport Container */}
-          <div className="viewport-box">
-            <div className="viewport-overlay-badges">
-              <span className={`status-pill ${physics.isThermalFault ? "danger" : "safe"}`}>
-                <Flame size={13} />
-                <span>Tj: {physics.tJunction.toFixed(1)} °C {physics.isThermalFault ? "(OVERHEATING)" : "(SAFE)"}</span>
-              </span>
-              <span className="status-pill info">
-                <Zap size={13} />
-                <span>P_loss: {physics.powerLossW.toFixed(2)} W</span>
-              </span>
-              <span className="status-pill neutral">
-                <Layers size={13} />
-                <span>{isPcb ? "FR-4 Copper Routing" : "Solderless Breadboard"}</span>
-              </span>
-            </div>
-
-            {/* 3D Scene Viewport */}
-            {run && (
-              <Deferred3DViewport
-                run={run}
-                plan={selectedPlan}
-                layer={layer}
-                dark={true}
-                isPcb={isPcb}
-                isOverheating={physics.isThermalFault}
+        <div className="eda-toolbar-right">
+          {/* Wire Color Selector */}
+          <div className="wire-color-picker" title="Select Jumper Wire Color">
+            <span className="picker-label">Wire:</span>
+            {(["red", "black", "green", "blue", "yellow"] as const).map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot color-${color} ${wireColor === color ? "selected" : ""}`}
+                onClick={() => setWireColor(color)}
+                aria-label={`${color} wire`}
               />
-            )}
+            ))}
           </div>
 
-          {/* Physical Controls & Sliders Drawer */}
-          <div className="physical-sliders-panel">
-            <div className="panel-header">
-              <div className="panel-title">
-                <Sliders size={16} />
-                <span>Live Multisim Physical Parameters</span>
+          {/* Reset Circuit */}
+          <button
+            type="button"
+            className="eda-action-btn"
+            onClick={() => {
+              setVin(12.0);
+              setPotRatio(0.65);
+              setSwitchClosed(true);
+              setIsBuckInstalled(false);
+              setSimRunning(true);
+            }}
+            title="Reset circuit to initial conditions"
+          >
+            <RotateCcw size={13} />
+            <span>Reset</span>
+          </button>
+
+          {/* Master One-Click Fix Toggle */}
+          <button
+            type="button"
+            className={`btn-apply-fix-top ${isBuckInstalled ? "revert" : "apply"}`}
+            onClick={() => setIsBuckInstalled(!isBuckInstalled)}
+          >
+            <Zap size={14} />
+            <span>{isBuckInstalled ? "Revert to Linear LM7805" : "⚡ Apply Buck Converter Fix"}</span>
+          </button>
+        </div>
+      </section>
+
+      {/* 2. PRIMARY WORKSPACE: INTERACTIVE CANVAS (LEFT) + INTELLIGENCE SIDEBAR (RIGHT) */}
+      <div className="ece-workspace-layout">
+        {/* Left Column: Interactive Circuit Canvas & Bench Instruments */}
+        <div className="eda-canvas-column">
+          {/* Main Interactive Circuit Stage */}
+          <div className="circuit-stage-card">
+            {/* Stage Status Header */}
+            <div className="stage-header">
+              <div className="stage-title-group">
+                <span className="stage-badge">
+                  {viewMode === "breadboard"
+                    ? "SOLDERLESS BREADBOARD CANVAS"
+                    : viewMode === "schematic"
+                    ? "SPICE SCHEMATIC NETLIST"
+                    : "FR-4 PCB COPPER ROUTING (1-OZ)"}
+                </span>
+                <h3>{isBuckInstalled ? "Active Circuit: TSR-1 2450 Buck Converter" : "Active Circuit: LM7805 Linear 5V Rail"}</h3>
               </div>
-              <span className="panel-note">Move sliders to see real-time thermal & electrical response</span>
+              <div className="stage-meters">
+                <span className={`meter-pill ${sim.isThermalFault ? "fault" : "normal"}`}>
+                  <Thermometer size={13} />
+                  {sim.junctionTempC.toFixed(1)} °C
+                  {sim.isThermalFault ? " (OVERHEATING)" : " (SAFE)"}
+                </span>
+                <span className="meter-pill efficiency">
+                  <Activity size={13} />
+                  {sim.efficiencyPercent.toFixed(1)}% Efficiency
+                </span>
+              </div>
             </div>
 
-            <div className="sliders-grid">
-              {/* Slider 1: Input Voltage */}
-              <div className="slider-card">
-                <div className="slider-label-row">
-                  <span>Input Voltage (Vin)</span>
-                  <span className="slider-value">{vin.toFixed(1)} V</span>
+            {/* Interactive Schematic & Component Board */}
+            <div className="interactive-board-viewport">
+              {/* Bench DC Power Supply Block */}
+              <div className="board-instrument power-supply-box">
+                <div className="instrument-title">BENCH DC POWER SUPPLY</div>
+                <div className="psu-display">
+                  <div className="seven-seg">{vin.toFixed(1)} V</div>
+                  <div className="seven-seg sub">{sim.iLoadMa} mA</div>
                 </div>
-                <input
-                  type="range"
-                  min="3.3"
-                  max="24.0"
-                  step="0.5"
-                  value={vin}
-                  onChange={(e) => setVin(parseFloat(e.target.value))}
-                  className="range-input"
-                />
-                <div className="slider-hints">
-                  <span>3.3V (Logic)</span>
-                  <span>12V (Car / DC Rail)</span>
-                  <span>24V (Industrial)</span>
-                </div>
-              </div>
-
-              {/* Slider 2: Load Current */}
-              <div className="slider-card">
-                <div className="slider-label-row">
-                  <span>Load Current (I_load)</span>
-                  <span className="slider-value">{iload} mA</span>
-                </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="1000"
-                  step="10"
-                  value={iload}
-                  onChange={(e) => setIload(parseInt(e.target.value, 10))}
-                  className="range-input"
-                />
-                <div className="slider-hints">
-                  <span>50mA (Sensor)</span>
-                  <span>350mA (MCU + Wi-Fi)</span>
-                  <span>1000mA (1A Max)</span>
+                <div className="psu-controls">
+                  <label>
+                    <span>Vin: {vin.toFixed(1)} V</span>
+                    <input
+                      type="range"
+                      min={5.0}
+                      max={24.0}
+                      step={0.5}
+                      value={vin}
+                      onChange={(e) => setVin(parseFloat(e.target.value))}
+                    />
+                  </label>
                 </div>
               </div>
 
-              {/* Slider 3: Ambient Temperature */}
-              <div className="slider-card">
-                <div className="slider-label-row">
-                  <span>Ambient Temp (T_A)</span>
-                  <span className="slider-value">{tAmbient} °C</span>
+              {/* Wire Path 1: PSU to Switch */}
+              <div className="wire-segment psu-to-switch" style={{ borderColor: wireColor }} />
+
+              {/* Interactive SPST Rocker Switch */}
+              <div
+                className={`board-component switch-box ${switchClosed ? "closed" : "open"}`}
+                onClick={() => setSwitchClosed(!switchClosed)}
+                role="button"
+                tabIndex={0}
+                title="Click to toggle power switch ON / OFF"
+              >
+                <div className="comp-label">SPST POWER SWITCH</div>
+                <div className="rocker-switch">
+                  <div className={`rocker-paddle ${switchClosed ? "on" : "off"}`}>
+                    <span>{switchClosed ? "ON" : "OFF"}</span>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="60"
-                  step="1"
-                  value={tAmbient}
-                  onChange={(e) => setTAmbient(parseInt(e.target.value, 10))}
-                  className="range-input"
-                />
-                <div className="slider-hints">
-                  <span>25°C (Lab AC)</span>
-                  <span>40°C (Enclosure)</span>
-                  <span>60°C (Harsh Env)</span>
+                <small>{switchClosed ? "Circuit Closed (Current Flows)" : "Circuit Open (0 mA)"}</small>
+              </div>
+
+              {/* Wire Path 2: Switch to Regulator */}
+              <div className="wire-segment switch-to-reg" style={{ borderColor: wireColor }} />
+
+              {/* Active Regulator Socket */}
+              <div className={`board-component regulator-box ${isBuckInstalled ? "buck" : "linear"}`}>
+                <div className="comp-label">VOLTAGE REGULATION SOCKET</div>
+                <div className="regulator-visual">
+                  <div className={`part-icon-chip ${isBuckInstalled ? "buck-chip" : "linear-chip"}`}>
+                    <Cpu size={24} />
+                    <span>{isBuckInstalled ? "TSR 1-2450" : "LM7805"}</span>
+                    <small>{isBuckInstalled ? "SIP-3 94% Buck" : "TO-220 Linear"}</small>
+                  </div>
+                  <div className={`thermal-indicator ${sim.isThermalFault ? "hot" : "cool"}`}>
+                    <Flame size={14} />
+                    <span>{sim.junctionTempC.toFixed(1)} °C</span>
+                  </div>
+                </div>
+                <div className="regulator-pins">
+                  <span>1: IN</span>
+                  <span>2: GND</span>
+                  <span>3: OUT</span>
                 </div>
               </div>
 
-              {/* Slider 4: PCB Copper Trace Width */}
-              <div className="slider-card">
-                <div className="slider-label-row">
-                  <span>IPC-2221 PCB Trace Width</span>
-                  <span className={`slider-value ${physics.isTraceOverheated ? "text-danger" : ""}`}>
-                    {traceWidthMm.toFixed(2)} mm ({physics.pcbTraceDeltaT.toFixed(1)}°C rise)
+              {/* Wire Path 3: Regulator to Potentiometer Load & LED */}
+              <div className="wire-segment reg-to-load" style={{ borderColor: wireColor }} />
+
+              {/* Interactive Potentiometer (Load Adjustment) */}
+              <div className="board-component pot-box">
+                <div className="comp-label">LOAD POTENTIOMETER (R_LOAD)</div>
+                <div className="pot-dial-container">
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={0.95}
+                    step={0.01}
+                    value={potRatio}
+                    onChange={(e) => setPotRatio(parseFloat(e.target.value))}
+                    className="pot-slider"
+                  />
+                  <div className="pot-readout">
+                    <span>Load: {(10 + (1 - potRatio) * 100).toFixed(0)} Ω</span>
+                    <strong>{sim.iLoadMa} mA</strong>
+                  </div>
+                </div>
+                <small>Drag slider to vary load current</small>
+              </div>
+
+              {/* Wire Path 4: Regulator to Indicator LED */}
+              <div className="wire-segment reg-to-led" style={{ borderColor: wireColor }} />
+
+              {/* Functional Indicator LED */}
+              <div className="board-component led-box">
+                <div className="comp-label">5mm RED STATUS LED</div>
+                <div className="led-lamp-fixture">
+                  <div
+                    className="led-bulb"
+                    style={{
+                      opacity: sim.ledBrightness > 0 ? 0.3 + sim.ledBrightness * 0.7 : 0.2,
+                      boxShadow:
+                        sim.ledBrightness > 0
+                          ? `0 0 ${12 + sim.ledBrightness * 20}px rgba(239, 68, 68, ${sim.ledBrightness})`
+                          : "none",
+                    }}
+                  />
+                  <div className="led-base" />
+                </div>
+                <small>{sim.ledBrightness > 0 ? "Illuminated (5V Rail Active)" : "Dark (Unpowered)"}</small>
+              </div>
+
+              {/* Real Digital Multimeter (DMM) Instrument */}
+              <div className="board-instrument multimeter-box">
+                <div className="dmm-header">
+                  <span className="instrument-title">DIGITAL MULTIMETER</span>
+                  <div className="dmm-mode-selector">
+                    <button
+                      type="button"
+                      className={`dmm-tab ${dmmMode === "V" ? "active" : ""}`}
+                      onClick={() => setDmmMode("V")}
+                    >
+                      V
+                    </button>
+                    <button
+                      type="button"
+                      className={`dmm-tab ${dmmMode === "mA" ? "active" : ""}`}
+                      onClick={() => setDmmMode("mA")}
+                    >
+                      mA
+                    </button>
+                    <button
+                      type="button"
+                      className={`dmm-tab ${dmmMode === "W" ? "active" : ""}`}
+                      onClick={() => setDmmMode("W")}
+                    >
+                      W
+                    </button>
+                    <button
+                      type="button"
+                      className={`dmm-tab ${dmmMode === "degC" ? "active" : ""}`}
+                      onClick={() => setDmmMode("degC")}
+                    >
+                      °C
+                    </button>
+                  </div>
+                </div>
+                <div className="dmm-screen">
+                  <span className="dmm-lcd-text">{sim.dmmText}</span>
+                  <span className="dmm-mode-label">{dmmMode === "degC" ? "THERMAL" : dmmMode}</span>
+                </div>
+                <div className="dmm-terminals">
+                  <div className="terminal red-lead">
+                    <span className="term-circle" />
+                    <span>V/Ω/mA Probe (V_OUT)</span>
+                  </div>
+                  <div className="terminal black-lead">
+                    <span className="term-circle" />
+                    <span>COM Probe (GND)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bench Parameter Slider Bar */}
+            <div className="bench-sliders-dock">
+              <div className="dock-slider">
+                <span className="slider-label">DC Input Voltage (Vin)</span>
+                <div className="slider-row">
+                  <input
+                    type="range"
+                    min={5.0}
+                    max={24.0}
+                    step={0.5}
+                    value={vin}
+                    onChange={(e) => setVin(parseFloat(e.target.value))}
+                  />
+                  <strong>{vin.toFixed(1)} V</strong>
+                </div>
+              </div>
+
+              <div className="dock-slider">
+                <span className="slider-label">Ambient Air Temp (Ta)</span>
+                <div className="slider-row">
+                  <input
+                    type="range"
+                    min={15}
+                    max={60}
+                    step={1}
+                    value={tAmbient}
+                    onChange={(e) => setTAmbient(parseInt(e.target.value, 10))}
+                  />
+                  <strong>{tAmbient} °C</strong>
+                </div>
+              </div>
+
+              <div className="dock-slider">
+                <span className="slider-label">PCB Trace Width</span>
+                <div className="slider-row">
+                  <input
+                    type="range"
+                    min={0.25}
+                    max={3.0}
+                    step={0.25}
+                    value={traceWidthMm}
+                    onChange={(e) => setTraceWidthMm(parseFloat(e.target.value))}
+                  />
+                  <strong>{traceWidthMm.toFixed(2)} mm</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3D Physical Geometry & Thermal Glow Viewport (Collapsible / Interactive) */}
+          {run && (
+            <div className="viewport-3d-card">
+              <div className="card-header-bar">
+                <div>
+                  <span className="mini-badge">3D SPICE & THERMAL VIEWPORT</span>
+                  <h4>Real-Time Thermal Dissipation Geometry</h4>
+                </div>
+                <div className="header-actions">
+                  <span className={`status-pill ${sim.isThermalFault ? "fault" : "safe"}`}>
+                    {sim.isThermalFault ? "🔥 THERMAL RUNAWAY" : "🟢 THERMALLY SAFE"}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="0.25"
-                  max="2.5"
-                  step="0.05"
-                  value={traceWidthMm}
-                  onChange={(e) => setTraceWidthMm(parseFloat(e.target.value))}
-                  className="range-input"
+              </div>
+              <div className="viewport-3d-frame">
+                <Deferred3DViewport
+                  run={run}
+                  plan={run.candidate_plans_json[isBuckInstalled ? 0 : 1]}
+                  layer={layer}
+                  dark={false}
+                  isPcb={viewMode === "pcb"}
+                  isOverheating={sim.isThermalFault}
                 />
-                <div className="slider-hints">
-                  <span>0.25mm (Narrow)</span>
-                  <span>1.0mm (Recommended)</span>
-                  <span>2.5mm (Heavy Power)</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Recommended Solution + Diagnosis + Component Tray + Copilot */}
+        <div className="eda-sidebar-column">
+          {/* 1. SINGLE RECOMMENDED SOLUTION (NO 3-PLAN NOISE) */}
+          <div className="solution-hero-card">
+            <div className="solution-badge">
+              <Sparkles size={13} />
+              <span>SINGLE RECOMMENDED SOLUTION</span>
+            </div>
+            <h3>TSR-1 2450 Switched Buck Converter</h3>
+            <p className="solution-subtitle">
+              Pin-compatible SIP-3 drop-in replacement. Eliminates bulky heatsinks and cuts thermal dissipation by 95.5%.
+            </p>
+
+            {/* Quantitative Scorecard */}
+            <div className="scorecard-grid">
+              <div className="score-item">
+                <span className="score-label">Efficiency</span>
+                <div className="score-diff">
+                  <span className="old-val">41.7%</span>
+                  <ArrowRight size={12} />
+                  <span className="new-val good">94.0%</span>
+                </div>
+              </div>
+
+              <div className="score-item">
+                <span className="score-label">Junction Temp</span>
+                <div className="score-diff">
+                  <span className="old-val hot">118.2 °C</span>
+                  <ArrowRight size={12} />
+                  <span className="new-val cool">32.8 °C</span>
+                </div>
+              </div>
+
+              <div className="score-item">
+                <span className="score-label">Power Wasted</span>
+                <div className="score-diff">
+                  <span className="old-val hot">2.45 W</span>
+                  <ArrowRight size={12} />
+                  <span className="new-val cool">0.11 W</span>
                 </div>
               </div>
             </div>
+
+            {/* Single Click Apply Button */}
+            <button
+              type="button"
+              className={`btn-apply-hero ${isBuckInstalled ? "active-fix" : ""}`}
+              onClick={() => setIsBuckInstalled(!isBuckInstalled)}
+            >
+              <Zap size={16} />
+              <span>{isBuckInstalled ? "Fix Applied: TSR-1 Buck Active (Click to Revert)" : "⚡ Apply Recommended Fix to Board"}</span>
+            </button>
           </div>
 
-          {/* Interactive Component Drawer / Catalog */}
-          <div className="component-catalog-panel">
-            <div className="catalog-header-row">
-              <div className="catalog-title">
-                <Cpu size={16} />
-                <span>Component Catalog & Drawer (VNRVJIET ECE Syllabus)</span>
+          {/* 2. FIRST-PRINCIPLES DIAGNOSIS */}
+          <div className="diagnosis-clean-card">
+            <div className="diag-header">
+              <Info size={15} />
+              <h4>Circuit Diagnostics & Physics Breakdown</h4>
+            </div>
+            <ul className="diag-points">
+              <li>
+                <strong>What is happening:</strong> Dropping ({vin}V - 5V) = {(vin - 5).toFixed(1)}V across the internal pass transistor at {sim.iLoadMa} mA load.
+              </li>
+              <li>
+                <strong>Why it fails:</strong> The LM7805 converts excess voltage into {sim.powerLossW.toFixed(2)} W of pure waste heat. Under thermal resistance of RθJA=36°C/W, junction temperature reaches {sim.junctionTempC.toFixed(1)}°C, triggering thermal protection shutdown.
+              </li>
+              <li>
+                <strong>The Fix:</strong> Switched inductor bucking charges and discharges energy magnetically with 94% efficiency, virtually eliminating thermal dissipation without changing PCB layout.
+              </li>
+            </ul>
+          </div>
+
+          {/* 3. TINKERCAD-STYLE COMPONENT DRAWER */}
+          <div className="component-tray-card">
+            <div className="tray-header">
+              <div className="tray-title-row">
+                <Cpu size={15} />
+                <h4>Component Library</h4>
+                <span className="part-count">({filteredCatalog.length} parts)</span>
               </div>
-              <div className="catalog-search-box">
-                <Search size={14} />
+              <div className="search-box">
+                <Search size={13} />
                 <input
                   type="text"
-                  placeholder="Search components (7805, Buck, BJT, 555, ESP32...)"
+                  placeholder="Search 7805, Buck, 555, BJT, ESP32..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              <div className="category-scroll">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`cat-pill ${selectedCategory === cat ? "active" : ""}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="category-pills-row">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  className={`cat-pill ${selectedCategory === cat ? "active" : ""}`}
-                  onClick={() => setSelectedCategory(cat)}
+            {/* Component Cards Grid */}
+            <div className="tray-grid">
+              {filteredCatalog.map((part) => (
+                <div
+                  key={part.id}
+                  className={`tray-part-card ${selectedDrawerPart.id === part.id ? "selected" : ""}`}
+                  onClick={() => setSelectedDrawerPart(part)}
+                  role="button"
+                  tabIndex={0}
                 >
-                  {cat}
-                </button>
+                  <div className="part-card-top">
+                    <span className="part-name">{part.name}</span>
+                    <span className="part-footprint">{part.footprint}</span>
+                  </div>
+                  <div className="part-specs">{part.specs}</div>
+                  <p className="part-desc">{part.description}</p>
+                </div>
               ))}
             </div>
-
-            {/* Component Cards Carousel / Grid */}
-            <div className="components-scroll-grid">
-              {filteredCatalog.map((comp) => {
-                const isSelected = activeComponent.id === comp.id;
-                return (
-                  <div
-                    key={comp.id}
-                    className={`component-pick-card ${isSelected ? "selected" : ""}`}
-                    onClick={() => handleSelectComponent(comp)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="comp-card-top">
-                      <span className="comp-category-tag">{comp.category}</span>
-                      <span className="comp-weight">{comp.weight}</span>
-                    </div>
-                    <div className="comp-name">{comp.name}</div>
-                    <div className="comp-footprint">{comp.footprint}</div>
-                    <div className="comp-specs">{comp.specs}</div>
-                    <div className="comp-card-action">
-                      <span>{isSelected ? "Active in Circuit ✓" : "Click to Inspect & Swap"}</span>
-                      <ArrowRight size={12} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Plain-English Diagnosis + Remediation Plans + Q&A Copilot */}
-        <div className="studio-right-column">
-          {/* Active Inspected Component Card */}
-          <div className="inspected-component-card">
-            <div className="inspected-header">
-              <span className="sub-label">ACTIVE COMPONENT IN FOCUS</span>
-              <h3>{activeComponent.name}</h3>
-              <span className="footprint-badge">{activeComponent.footprint} · Weight: {activeComponent.weight}</span>
-            </div>
-            <p className="inspected-desc">{activeComponent.description}</p>
-            <div className="inspected-risk-box">
-              <AlertTriangle size={15} className="risk-icon" />
-              <div>
-                <strong>Physical Risk:</strong> {activeComponent.risk}
-              </div>
-            </div>
-            <div className="inspected-fix-box">
-              <CheckCircle2 size={15} className="fix-icon" />
-              <div>
-                <strong>Recommended Fix:</strong> {activeComponent.fix}
-              </div>
-            </div>
           </div>
 
-          {/* Multisim Plain-English Diagnosis */}
-          <div className="plain-english-diagnosis-card">
-            <div className="card-headline-row">
-              <Info size={16} className="info-icon" />
-              <h4>Multisim First-Principles Diagnosis</h4>
-            </div>
-
-            <div className="diagnosis-block">
-              <div className="diag-title">🔍 What Is Happening</div>
-              <p>
-                Input voltage is {physics.vIn}V, dropping to 5.0V output for a {iload}mA load current. 
-                The circuit drops {physics.vDrop.toFixed(1)}V across the regulator, dissipating{" "}
-                <strong>{physics.powerLossW.toFixed(2)} W</strong> of electrical power.
-              </p>
-            </div>
-
-            <div className="diagnosis-block failure">
-              <div className="diag-title">⚠️ Why It Fails</div>
-              <p>
-                {physics.isThermalFault ? (
-                  <>
-                    At {physics.powerLossW.toFixed(2)}W power loss with bare package thermal resistance (36 °C/W), 
-                    junction temperature shoots to <strong>{physics.tJunction.toFixed(1)}°C</strong>. 
-                    This exceeds the safe operating ceiling (100°C), triggering internal thermal shutdown, output voltage drop, 
-                    and potential copper pad delamination on the PCB!
-                  </>
-                ) : (
-                  <>
-                    Junction temperature is running at {physics.tJunction.toFixed(1)}°C, within the safe operating envelope. 
-                    PCB copper trace temperature rise is {physics.pcbTraceDeltaT.toFixed(1)}°C.
-                  </>
-                )}
-              </p>
-            </div>
-
-            <div className="diagnosis-block fix">
-              <div className="diag-title">💡 How to Fix It (ECE Friend&apos;s Advice)</div>
-              <p>
-                {activeComponent.id === "TRANSFORMER_STEPDOWN" ? (
-                  <>
-                    The iron-core transformer weighs 350g and occupies 45 cm³ on the PCB. Switching to a Capacitive Dropper 
-                    (0.47µF X2 safety capacitor + 100Ω inrush resistor) shrinks board weight to just 8g for sealed sensor nodes.
-                  </>
-                ) : (
-                  <>
-                    Choose <strong>Plan B (TSR-1 Buck Module)</strong>. Because switched-mode regulators achieve 94% efficiency, 
-                    power loss drops to just 0.11W, keeping the module cool at 34°C with zero heatsink required.
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-
-          {/* 3 Remediation Plans Deck */}
-          <div className="remediation-plans-deck">
-            <div className="deck-header">
-              <span>THREE VERIFIED REMEDIATION PLANS</span>
-            </div>
-
-            {/* Plan A */}
-            <div
-              className={`plan-card ${selectedPlanId === "plan_a" ? "active-plan" : ""}`}
-              onClick={() => setSelectedPlanId("plan_a")}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="plan-header-row">
-                <span className="plan-pill">Plan A</span>
-                <span className="plan-title">Extruded Aluminum Heat Sink</span>
-              </div>
-              <p className="plan-desc">Adds a 15 °C/W clip-on aluminum heatsink to LM7805. Lowers Tj to 82°C.</p>
-              <div className="plan-tradeoff">⚠️ Trade-off: Adds 18g weight and 12 cm³ vertical clearance.</div>
-            </div>
-
-            {/* Plan B (Recommended) */}
-            <div
-              className={`plan-card recommended ${selectedPlanId === "plan_b" ? "active-plan" : ""}`}
-              onClick={() => setSelectedPlanId("plan_b")}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="plan-header-row">
-                <span className="plan-pill recommended-pill">Plan B (Recommended)</span>
-                <span className="plan-title">TSR-1 2450 Switched Buck Module</span>
-              </div>
-              <p className="plan-desc">Pin-compatible drop-in replacement. 94% efficiency, runs at 34°C, zero heatsink needed.</p>
-              <div className="plan-tradeoff">✓ Eliminates 95% of heat; saves PCB space and battery life.</div>
-            </div>
-
-            {/* Plan C */}
-            <div
-              className={`plan-card ${selectedPlanId === "plan_c" ? "active-plan" : ""}`}
-              onClick={() => setSelectedPlanId("plan_c")}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="plan-header-row">
-                <span className="plan-pill">Plan C</span>
-                <span className="plan-title">Pre-Dropper Resistor Stage</span>
-              </div>
-              <p className="plan-desc">Places a 10Ω 5W power resistor upstream to split thermal dissipation across two parts.</p>
-              <div className="plan-tradeoff">⚠️ Trade-off: Still wastes the same total 2.45W of electrical power.</div>
-            </div>
-          </div>
-
-          {/* Engineering Copilot Q&A Box */}
-          <div className="copilot-qa-panel">
+          {/* 4. CIRCUIT ASSISTANT (COPILOT) */}
+          <div className="copilot-card">
             <div className="copilot-header">
-              <Sparkles size={15} className="sparkle-icon" />
-              <span>ECE Engineering Copilot (Dual-Brain Q&A)</span>
+              <Sparkles size={14} />
+              <h4>Circuit Assistant</h4>
             </div>
-
-            <div className="copilot-chat-history">
+            <div className="chat-thread">
               {chatLog.map((chat, idx) => (
-                <div key={idx} className="chat-bubble-group">
-                  <div className="user-bubble">{chat.q}</div>
-                  <div className="bot-bubble">
+                <div key={idx} className="chat-bubble-pair">
+                  <div className="chat-q">
+                    <span>Q: {chat.q}</span>
+                  </div>
+                  <div className="chat-a">
                     <p>{chat.a}</p>
-                    <span className="bot-source-tag">Source: {chat.source.replace("_", " ")}</span>
                   </div>
                 </div>
               ))}
             </div>
-
-            <form onSubmit={handleAskQuestion} className="copilot-input-form">
+            <form className="copilot-input-form" onSubmit={handleAskQuestion}>
               <input
                 type="text"
-                placeholder="Ask about thermal runaway, capacitive droppers, or PCB routing..."
+                placeholder="Ask about thermal runaway, capacitor sizing..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                disabled={copilotLoading}
               />
               <button type="submit" disabled={copilotLoading || !question.trim()}>
-                {copilotLoading ? <span className="btn-spinner" /> : <Send size={15} />}
+                <Send size={14} />
               </button>
             </form>
           </div>
