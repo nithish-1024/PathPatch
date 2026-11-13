@@ -3,7 +3,14 @@ import type { AnalysisRun, CandidatePlan, ViewLayer } from "../types/patchpath";
 
 const Center3DViewport = lazy(() => import("./Center3DViewport"));
 
-type Props = { run: AnalysisRun; plan: CandidatePlan; layer: ViewLayer; dark: boolean };
+type Props = {
+  run: AnalysisRun;
+  plan: CandidatePlan;
+  layer: ViewLayer;
+  dark: boolean;
+  isPcb?: boolean;
+  isOverheating?: boolean;
+};
 
 function ViewportPlaceholder() {
   return <section className="viewport-panel" aria-label="Interactive system specimen">

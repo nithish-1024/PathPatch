@@ -76,9 +76,13 @@ export interface CircuitParams {
   vin?: number;
   vout?: number;
   iload_a?: number;
+  iload?: number;
   ambient_c?: number;
+  t_ambient?: number;
   ac_dc_stage?: "transformer" | "capacitive_dropper" | "buck_module";
   components?: string[];
+  component_id?: string;
+  trace_width_mm?: number;
 }
 
 export interface TrussParams {

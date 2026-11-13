@@ -65,6 +65,27 @@ export const api = {
         ...(user_question ? { user_question } : {}),
       }),
     }),
+  preview: (
+    title: string,
+    raw_input: string,
+    department_lens: string,
+    analysis_type: "repository" | "circuit" | "truss" | "beam" | "idea",
+    circuit_params?: CircuitParams,
+    truss_params?: TrussParams,
+    beam_params?: BeamParams,
+  ) =>
+    request<AnalysisRun>("/api/v1/preview", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        raw_input,
+        department_lens,
+        analysis_type,
+        ...(circuit_params ? { circuit_params } : {}),
+        ...(truss_params ? { truss_params } : {}),
+        ...(beam_params ? { beam_params } : {}),
+      }),
+    }),
   ask: (analysis_type: string, user_question: string, context_state?: Record<string, unknown>, run_id?: string) =>
     request<AskResponse>("/api/v1/ask", {
       method: "POST",

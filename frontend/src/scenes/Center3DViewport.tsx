@@ -13,7 +13,21 @@ function StaticFallback({ run }: { run: AnalysisRun }) {
   return <div className="scene-fallback"><div className="fallback-glyph"><Box size={29} /></div><strong>{run.title}</strong><p>The 3D view is unavailable here. The written model and inputs remain visible alongside it.</p><div className="fallback-node-row">{run.system_graph_json.nodes.slice(0, 6).map((node) => <span key={node.id}>{node.label}</span>)}</div></div>;
 }
 
-export default function Center3DViewport({ run, plan, layer, dark }: { run: AnalysisRun; plan: CandidatePlan; layer: ViewLayer; dark: boolean }) {
+export default function Center3DViewport({
+  run,
+  plan,
+  layer,
+  dark,
+  isPcb = false,
+  isOverheating = false,
+}: {
+  run: AnalysisRun;
+  plan: CandidatePlan;
+  layer: ViewLayer;
+  dark: boolean;
+  isPcb?: boolean;
+  isOverheating?: boolean;
+}) {
   const [powered, setPowered] = useState(false);
   const [addedParts, setAddedParts] = useState<BreadboardComponent[]>([]);
   const [addedWires, setAddedWires] = useState<BreadboardWire[]>([]);
@@ -65,7 +79,17 @@ export default function Center3DViewport({ run, plan, layer, dark }: { run: Anal
         <pointLight position={[-4, -2, 4]} intensity={0.7} color="#74a7a3" />
         <Stars radius={24} depth={20} count={260} factor={1.1} saturation={0.12} fade speed={0.1} />
         {run.mode === "cs_repo" && <CodeNebulaScene graph={run.system_graph_json} plan={plan} layer={layer} />}
-        {run.mode === "ece_circuit" && <PcbSpecimenScene board={sceneBoard} plan={plan} layer={layer} powered={powered && circuitValid} reducedMotion={reducedMotion} />}
+        {run.mode === "ece_circuit" && (
+          <PcbSpecimenScene
+            board={sceneBoard}
+            plan={plan}
+            layer={layer}
+            powered={powered && circuitValid}
+            reducedMotion={reducedMotion}
+            isPcb={isPcb}
+            isOverheating={isOverheating}
+          />
+        )}
         {run.mode === "civil_mech" && <StructuralTrussScene graph={run.system_graph_json} plan={plan} layer={layer} />}
         {run.mode === "mechanical_beam" && <MechanicalBeamScene metrics={run.analysis_json.metrics ?? {}} plan={plan} layer={layer} />}
         {run.mode === "custom_upskiller" && <CustomUpskillerGraphScene graph={run.system_graph_json} layer={layer} />}
