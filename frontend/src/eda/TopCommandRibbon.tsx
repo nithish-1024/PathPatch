@@ -26,6 +26,7 @@ interface TopCommandRibbonProps {
   onClear: () => void;
   onExportNetlist: () => void;
   onOpenCommunityModal?: () => void;
+  onOpenPresetsModal?: () => void;
 }
 
 const WIRE_COLORS = [
@@ -51,6 +52,7 @@ export default function TopCommandRibbon({
   onClear,
   onExportNetlist,
   onOpenCommunityModal,
+  onOpenPresetsModal,
 }: TopCommandRibbonProps) {
   return (
     <header className="eda-command-ribbon" role="toolbar" aria-label="EDA Command Ribbon">
@@ -140,7 +142,7 @@ export default function TopCommandRibbon({
           ))}
         </div>
 
-        {/* Circuit Preset Dropdown Selector */}
+        {/* Circuit Preset Dropdown Selector & Folders Modal Trigger */}
         <div className="preset-selector-box">
           <FolderOpen size={13} className="preset-icon" />
           <select
@@ -155,6 +157,16 @@ export default function TopCommandRibbon({
               </option>
             ))}
           </select>
+          {onOpenPresetsModal && (
+            <button
+              type="button"
+              className="ml-1 px-2 py-1 text-[11px] font-semibold bg-indigo-600/80 hover:bg-indigo-600 text-white rounded flex items-center gap-1 transition-colors"
+              onClick={onOpenPresetsModal}
+              title="Open Organized Syllabus Preset Folders"
+            >
+              <span>📁</span> Folders
+            </button>
+          )}
         </div>
 
         {/* Community Circuits Hub Modal Trigger */}

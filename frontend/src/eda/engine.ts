@@ -433,6 +433,103 @@ export class EdaSimulationEngine {
           c.state = { voltage: vDiff, current: vDiff / 10.0, power: vDiff * (vDiff / 10.0), active: rpm > 100 };
           break;
         }
+
+        case "DIODE_SCHOTTKY":
+        case "DIODE_1N4148":
+        case "DIODE_RECTIFIER": {
+          const anNet = pinToNet.get(`${c.id}:anode`);
+          const catNet = pinToNet.get(`${c.id}:cathode`);
+          const va = anNet ? (nodeVoltages[anNet] ?? 0) : 0;
+          const vk = catNet ? (nodeVoltages[catNet] ?? 0) : 0;
+          const vDiff = va - vk;
+          const forwardV = Number(c.properties.forwardV ?? 0.7);
+          const isConducting = vDiff >= forwardV;
+          const currentA = isConducting ? Math.min(1.0, (vDiff - forwardV) / 0.1) : 0;
+          c.state = { voltage: vDiff, current: currentA, active: isConducting };
+          break;
+        }
+
+        case "PHOTORESISTOR": {
+          const lux = Number(c.properties.lightLux ?? 500);
+          const rDark = Number(c.properties.darkResistance ?? 100000);
+          const rLight = Number(c.properties.lightResistance ?? 1000);
+          const rVal = Math.round(rLight + (rDark - rLight) * Math.exp(-lux / 200));
+          c.properties.resistance = rVal;
+          c.state = { voltage: 0, current: 0, active: lux > 100 };
+          break;
+        }
+
+        case "THERMISTOR_NTC": {
+          const tempC = Number(c.properties.tempC ?? 25);
+          const r25 = Number(c.properties.r25 ?? 10000);
+          const beta = Number(c.properties.beta ?? 3950);
+          const tKelvin = tempC + 273.15;
+          const rVal = Math.round(r25 * Math.exp(beta * (1 / tKelvin - 1 / 298.15)));
+          c.properties.resistance = rVal;
+          c.state = { tempC, active: true };
+          break;
+        }
+
+        case "RELAY_SPDT": {
+          const coilPosNet = pinToNet.get(`${c.id}:coil_pos`);
+          const coilNegNet = pinToNet.get(`${c.id}:coil_neg`);
+          const vp = coilPosNet ? (nodeVoltages[coilPosNet] ?? 0) : 0;
+          const vn = coilNegNet ? (nodeVoltages[coilNegNet] ?? 0) : 0;
+          const coilV = Math.abs(vp - vn);
+          const isEnergized = coilV >= 3.8;
+          c.properties.energized = isEnergized;
+          c.state = { voltage: coilV, active: isEnergized };
+          break;
+        }
+
+        case "VOLTMETER": {
+          const posNet = pinToNet.get(`${c.id}:pos`);
+          const negNet = pinToNet.get(`${c.id}:neg`);
+          const vp = posNet ? (nodeVoltages[posNet] ?? 0) : 0;
+          const vn = negNet ? (nodeVoltages[negNet] ?? 0) : 0;
+          const measuredV = vp - vn;
+          c.properties.displayedVoltage = measuredV;
+          c.state = { voltage: measuredV, active: true };
+          break;
+        }
+
+        case "AMMETER": {
+          const inNet = pinToNet.get(`${c.id}:in`);
+          const outNet = pinToNet.get(`${c.id}:out`);
+          const vin = inNet ? (nodeVoltages[inNet] ?? 0) : 0;
+          const vout = outNet ? (nodeVoltages[outNet] ?? 0) : 0;
+          const measuredI = Math.abs(vin - vout) / 0.01;
+          c.properties.displayedCurrentMa = measuredI * 1000;
+          c.state = { current: measuredI, active: true };
+          break;
+        }
+
+        case "RGB_LED": {
+          const rNet = pinToNet.get(`${c.id}:r`);
+          const gNet = pinToNet.get(`${c.id}:g`);
+          const bNet = pinToNet.get(`${c.id}:b`);
+          const gndNet = pinToNet.get(`${c.id}:gnd`);
+          const vgnd = gndNet ? (nodeVoltages[gndNet] ?? 0) : 0;
+          const vr = (rNet ? (nodeVoltages[rNet] ?? 0) : 0) - vgnd;
+          const vg = (gNet ? (nodeVoltages[gNet] ?? 0) : 0) - vgnd;
+          const vb = (bNet ? (nodeVoltages[bNet] ?? 0) : 0) - vgnd;
+          c.state = {
+            active: vr >= 2.0 || vg >= 3.0 || vb >= 3.0,
+          };
+          break;
+        }
+
+        case "IC_LM358": {
+          const in1Neg = pinToNet.get(`${c.id}:in1_neg`);
+          const in1Pos = pinToNet.get(`${c.id}:in1_pos`);
+          const out1 = pinToNet.get(`${c.id}:out1`);
+          const v1N = in1Neg ? (nodeVoltages[in1Neg] ?? 0) : 0;
+          const v1P = in1Pos ? (nodeVoltages[in1Pos] ?? 0) : 0;
+          const vOut1 = Math.max(0, Math.min(13.5, (v1P - v1N) * 100000));
+          if (out1) nodeVoltages[out1] = vOut1;
+          c.state = { voltage: vOut1, active: true };
+          break;
+        }
       }
     });
 

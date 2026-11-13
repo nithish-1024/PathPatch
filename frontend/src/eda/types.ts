@@ -7,7 +7,8 @@ export type ComponentCategory =
   | "digital"
   | "sources"
   | "outputs"
-  | "instruments";
+  | "instruments"
+  | "sensors";
 
 export type PinType = "in" | "out" | "passive" | "pwr" | "gnd" | "clk" | "trig";
 

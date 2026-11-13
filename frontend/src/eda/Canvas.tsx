@@ -630,12 +630,224 @@ export default function Canvas({
                 </g>
               )}
 
-              {/* Generic fallback badge if not explicitly matched */}
-              {!["RESISTOR", "POTENTIOMETER", "LED", "SWITCH_SPST", "IC_555", "IC_OPAMP_741", "REGULATOR_7805", "BUCK_TSR1", "BJT_NPN", "DISPLAY_7SEG", "COUNTER_4BIT", "SOURCE_DC", "GROUND"].includes(comp.type) && !comp.type.startsWith("GATE_") && (
+              {/* --- ELECTROLYTIC CAPACITOR --- */}
+              {comp.type === "CAPACITOR_ELECTROLYTIC" && (
                 <g>
-                  <rect x="-24" y="-18" width="48" height="36" rx="4" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
-                  <text x="0" y="4" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#f8fafc">
-                    {comp.name}
+                  <line x1="-24" y1="0" x2="-14" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <line x1="14" y1="0" x2="24" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <rect x="-14" y="-12" width="28" height="24" rx="4" fill="#1e3a8a" stroke="#1d4ed8" strokeWidth="1.5" />
+                  <line x1="-10" y1="-8" x2="-4" y2="-2" stroke="#94a3b8" strokeWidth="1" />
+                  <line x1="-4" y1="-8" x2="-10" y2="-2" stroke="#94a3b8" strokeWidth="1" />
+                  <rect x="5" y="-12" width="7" height="24" fill="#f8fafc" opacity="0.9" />
+                  <text x="8.5" y="-2" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#0f172a">-</text>
+                  <text x="8.5" y="8" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#0f172a">-</text>
+                  <text x="-4" y="4" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#ffffff" fontFamily="monospace">
+                    {comp.properties.capacitanceUf ?? 10}µF
+                  </text>
+                </g>
+              )}
+
+              {/* --- CERAMIC CAPACITOR --- */}
+              {comp.type === "CAPACITOR_CERAMIC" && (
+                <g>
+                  <line x1="-24" y1="0" x2="-12" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                  <line x1="12" y1="0" x2="24" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                  <circle cx="0" cy="0" r="12" fill="#c2410c" stroke="#9a3412" strokeWidth="1.5" />
+                  <text x="0" y="3" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#ffffff" fontFamily="monospace">
+                    104
+                  </text>
+                </g>
+              )}
+
+              {/* --- INDUCTOR --- */}
+              {comp.type === "INDUCTOR" && (
+                <g>
+                  <line x1="-36" y1="0" x2="-24" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <line x1="24" y1="0" x2="36" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <rect x="-24" y="-8" width="48" height="16" rx="4" fill="#1e293b" stroke="#475569" strokeWidth="1" />
+                  {[-18, -9, 0, 9, 18].map((x, i) => (
+                    <ellipse key={i} cx={x} cy="0" rx="3.5" ry="10" fill="none" stroke="#d97706" strokeWidth="2.5" />
+                  ))}
+                  <text x="0" y="3" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#fbbf24" fontFamily="monospace">
+                    {comp.properties.inductanceMh ?? 10}mH
+                  </text>
+                </g>
+              )}
+
+              {/* --- DIODES (RECTIFIER, SCHOTTKY, 1N4148, ZENER) --- */}
+              {(comp.type === "DIODE_RECTIFIER" || comp.type === "DIODE_SCHOTTKY" || comp.type === "DIODE_1N4148" || comp.type === "DIODE_ZENER") && (
+                <g>
+                  <line x1="-24" y1="0" x2="-14" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <line x1="14" y1="0" x2="24" y2="0" stroke="#94a3b8" strokeWidth="2.5" />
+                  <rect
+                    x="-14"
+                    y="-7"
+                    width="28"
+                    height="14"
+                    rx="3"
+                    fill={comp.type === "DIODE_ZENER" || comp.type === "DIODE_1N4148" ? "#b91c1c" : "#0f172a"}
+                    stroke="#475569"
+                    strokeWidth="1.2"
+                  />
+                  <rect
+                    x="6"
+                    y="-7"
+                    width="4"
+                    height="14"
+                    fill={comp.type === "DIODE_ZENER" || comp.type === "DIODE_1N4148" ? "#0f172a" : "#cbd5e1"}
+                  />
+                  <text x="-4" y="3" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="monospace">
+                    {comp.type === "DIODE_ZENER" ? "5V1" : comp.type === "DIODE_SCHOTTKY" ? "5819" : comp.type === "DIODE_1N4148" ? "4148" : "4007"}
+                  </text>
+                </g>
+              )}
+
+              {/* --- BJT PNP TRANSISTOR --- */}
+              {comp.type === "BJT_PNP" && (
+                <g>
+                  <path d="M -18 -12 A 18 18 0 0 1 18 -12 L 18 12 L -18 12 Z" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
+                  <text x="0" y="4" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#f8fafc" fontFamily="monospace">
+                    BC557
+                  </text>
+                  <text x="0" y="10" textAnchor="middle" fontSize="7" fill="#94a3b8">
+                    PNP
+                  </text>
+                </g>
+              )}
+
+              {/* --- N-CHANNEL POWER MOSFET (TO-220) --- */}
+              {(comp.type === "MOSFET_N" || comp.type === "MOSFET_P") && (
+                <g>
+                  <rect x="-22" y="-18" width="44" height="10" rx="2" fill="#64748b" stroke="#334155" strokeWidth="1" />
+                  <circle cx="0" cy="-13" r="3" fill="#0f172a" />
+                  <rect x="-22" y="-8" width="44" height="24" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
+                  <text x="0" y="6" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#38bdf8" fontFamily="monospace">
+                    {comp.type === "MOSFET_N" ? "IRFZ44N" : "IRF9540"}
+                  </text>
+                </g>
+              )}
+
+              {/* --- PUSHBUTTON (MOMENTARY TACTILE) --- */}
+              {comp.type === "PUSHBUTTON" && (
+                <g>
+                  <rect x="-18" y="-18" width="36" height="36" rx="4" fill="#334155" stroke="#64748b" strokeWidth="1.5" />
+                  <circle cx="0" cy="0" r="10" fill="#dc2626" stroke="#991b1b" strokeWidth="1.5" />
+                  <circle cx="0" cy="0" r="4" fill="#ffffff" opacity="0.3" />
+                </g>
+              )}
+
+              {/* --- PHOTORESISTOR (LDR) --- */}
+              {comp.type === "PHOTORESISTOR" && (
+                <g>
+                  <circle cx="0" cy="0" r="15" fill="#fef3c7" stroke="#d97706" strokeWidth="1.5" />
+                  <path d="M -9 -7 Q -4 -10 0 -7 Q 4 -4 8 -7 M -8 0 Q -4 -3 0 0 Q 4 3 8 0 M -9 7 Q -4 4 0 7 Q 4 10 8 7" stroke="#b45309" strokeWidth="2" fill="none" />
+                </g>
+              )}
+
+              {/* --- NTC THERMISTOR --- */}
+              {comp.type === "THERMISTOR_NTC" && (
+                <g>
+                  <line x1="-24" y1="0" x2="-10" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                  <line x1="10" y1="0" x2="24" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                  <circle cx="0" cy="0" r="10" fill="#1e3a8a" stroke="#1d4ed8" strokeWidth="1.5" />
+                  <text x="0" y="3" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#93c5fd" fontFamily="monospace">
+                    NTC
+                  </text>
+                </g>
+              )}
+
+              {/* --- SPDT RELAY --- */}
+              {comp.type === "RELAY_SPDT" && (
+                <g>
+                  <rect x="-24" y="-20" width="48" height="40" rx="4" fill="#1d4ed8" stroke="#3b82f6" strokeWidth="1.5" />
+                  <text x="0" y="-4" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#ffffff" fontFamily="monospace">
+                    RELAY 5V
+                  </text>
+                  <text x="0" y="8" textAnchor="middle" fontSize="8" fill="#93c5fd">
+                    {comp.properties.energized ? "ACTIVE (NO)" : "REST (NC)"}
+                  </text>
+                </g>
+              )}
+
+              {/* --- PIEZO BUZZER --- */}
+              {comp.type === "BUZZER" && (
+                <g>
+                  <circle cx="0" cy="0" r="18" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#020617" stroke="#1e293b" strokeWidth="1" />
+                  <text x="0" y="12" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#94a3b8">
+                    BUZZER
+                  </text>
+                </g>
+              )}
+
+              {/* --- DC MOTOR --- */}
+              {comp.type === "DC_MOTOR" && (
+                <g>
+                  <circle cx="0" cy="0" r="22" fill="#334155" stroke="#64748b" strokeWidth="2" />
+                  <circle cx="0" cy="0" r="6" fill="#ca8a04" stroke="#a16207" strokeWidth="1.5" />
+                  <text x="0" y="-8" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#f8fafc">
+                    MOTOR
+                  </text>
+                  <text x="0" y="14" textAnchor="middle" fontSize="8" fill="#38bdf8" fontFamily="monospace">
+                    {comp.state?.active ? "SPINNING" : "STOPPED"}
+                  </text>
+                </g>
+              )}
+
+              {/* --- AC FUNCTION GENERATOR --- */}
+              {comp.type === "SOURCE_AC" && (
+                <g>
+                  <circle cx="0" cy="0" r="20" fill="#0f172a" stroke="#eab308" strokeWidth="2" />
+                  <path d="M -10 0 Q -5 -10 0 0 Q 5 10 10 0" fill="none" stroke="#facc15" strokeWidth="2.5" />
+                  <text x="0" y="12" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">
+                    {comp.properties.frequencyHz ?? 1000}Hz
+                  </text>
+                </g>
+              )}
+
+              {/* --- DIGITAL CLOCK SOURCE --- */}
+              {comp.type === "SOURCE_CLOCK" && (
+                <g>
+                  <rect x="-18" y="-14" width="36" height="28" rx="4" fill="#0f172a" stroke="#22c55e" strokeWidth="1.5" />
+                  <polyline points="-12,4 -12,-4 0,-4 0,4 12,4 12,-4" fill="none" stroke="#4ade80" strokeWidth="2" />
+                </g>
+              )}
+
+              {/* --- VOLTMETER & AMMETER --- */}
+              {(comp.type === "VOLTMETER" || comp.type === "AMMETER") && (
+                <g>
+                  <rect x="-24" y="-16" width="48" height="32" rx="4" fill="#020617" stroke="#38bdf8" strokeWidth="1.5" />
+                  <text x="0" y="0" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#38bdf8" fontFamily="monospace">
+                    {comp.type === "VOLTMETER"
+                      ? `${Number(comp.properties.displayedVoltage ?? 0).toFixed(2)}V`
+                      : `${Number(comp.properties.displayedCurrentMa ?? 0).toFixed(1)}mA`}
+                  </text>
+                  <text x="0" y="11" textAnchor="middle" fontSize="7" fill="#94a3b8">
+                    {comp.type === "VOLTMETER" ? "VOLTS" : "CURRENT"}
+                  </text>
+                </g>
+              )}
+
+              {/* --- RGB LED --- */}
+              {comp.type === "RGB_LED" && (
+                <g>
+                  <circle cx="0" cy="0" r="14" fill="#ffffff" opacity="0.85" stroke="#94a3b8" strokeWidth="1.5" />
+                  <circle cx="-5" cy="0" r="3" fill="#ef4444" />
+                  <circle cx="0" cy="-4" r="3" fill="#22c55e" />
+                  <circle cx="5" cy="0" r="3" fill="#3b82f6" />
+                </g>
+              )}
+
+              {/* --- LM358 DUAL OP-AMP --- */}
+              {comp.type === "IC_LM358" && (
+                <g>
+                  <rect x="-36" y="-36" width="72" height="72" rx="4" fill="#0f172a" stroke="#3b82f6" strokeWidth="1.5" />
+                  <path d="M -10 -36 A 10 10 0 0 0 10 -36 Z" fill="#1e293b" />
+                  <text x="0" y="4" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#f8fafc" fontFamily="monospace">
+                    LM358
+                  </text>
+                  <text x="0" y="16" textAnchor="middle" fontSize="8" fill="#93c5fd">
+                    DUAL OP-AMP
                   </text>
                 </g>
               )}

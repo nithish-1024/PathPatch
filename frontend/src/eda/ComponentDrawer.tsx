@@ -20,10 +20,12 @@ const CATEGORIES: Array<{ id: "all" | ComponentCategory; label: string }> = [
   { id: "all", label: "All Components" },
   { id: "passives", label: "Passives" },
   { id: "semiconductors", label: "Semiconductors" },
-  { id: "ics", label: "Analog ICs" },
-  { id: "digital", label: "Digital (Vivado)" },
+  { id: "ics", label: "Linear ICs & Timers" },
+  { id: "digital", label: "Digital Logic" },
   { id: "sources", label: "Power & Sources" },
+  { id: "sensors", label: "Sensors & Relays" },
   { id: "outputs", label: "Outputs & Actuators" },
+  { id: "instruments", label: "Virtual Meters" },
 ];
 
 export default function ComponentDrawer({ onAddComponent }: ComponentDrawerProps) {

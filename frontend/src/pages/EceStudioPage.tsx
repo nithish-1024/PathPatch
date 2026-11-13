@@ -23,6 +23,8 @@ import Canvas from "../eda/Canvas";
 import InstrumentsDock from "../eda/InstrumentsDock";
 import { ComponentPropertyInspector } from "../eda/ComponentPropertyInspector";
 import { CommunityCircuitsModal } from "../eda/CommunityCircuitsModal";
+import { PresetsDrawerModal } from "../eda/PresetsDrawerModal";
+import { AiCircuitAssistant } from "../eda/AiCircuitAssistant";
 import { EdaSimulationEngine } from "../eda/engine";
 import { EDA_PRESETS } from "../eda/presets";
 import { EDA_COMPONENT_CATALOG } from "../eda/componentsCatalog";
@@ -36,28 +38,27 @@ import type {
 import { api } from "../api/client";
 
 export default function EceStudioPage() {
-  // Preset State
-  const [activePresetId, setActivePresetId] = useState<string>("555_astable");
+  // Preset State: Defaults to Clean Blank Canvas as requested
+  const [activePresetId, setActivePresetId] = useState<string>("blank_canvas");
 
-  // Circuit Workbench Elements
-  const [components, setComponents] = useState<EdaPlacedComponent[]>(
-    () => EDA_PRESETS[0].components
-  );
-  const [wires, setWires] = useState<EdaWire[]>(() => EDA_PRESETS[0].wires);
+  // Circuit Workbench Elements - Starts clean
+  const [components, setComponents] = useState<EdaPlacedComponent[]>([]);
+  const [wires, setWires] = useState<EdaWire[]>([]);
 
   // Simulation Controls & View Mode
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<ViewMode>("breadboard");
   const [wireColor, setWireColor] = useState<string>("red");
 
-  // Selected Component for Property Inspector
+  // Modals & Panels
   const [selectedComp, setSelectedComp] = useState<EdaPlacedComponent | null>(null);
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
 
   // Engine & Simulation Result State
   const engineRef = useRef<EdaSimulationEngine>(new EdaSimulationEngine());
   const [simResult, setSimResult] = useState<SimulationResult>(() =>
-    engineRef.current.step(EDA_PRESETS[0].components, EDA_PRESETS[0].wires, 0.001)
+    engineRef.current.step([], [], 0.001)
   );
 
   // Copilot Q&A State
@@ -266,6 +267,7 @@ export default function EceStudioPage() {
         onClear={handleClear}
         onExportNetlist={handleExportNetlist}
         onOpenCommunityModal={() => setIsCommunityModalOpen(true)}
+        onOpenPresetsModal={() => setIsPresetsModalOpen(true)}
       />
 
       {/* 2. MAIN 3-PANEL WORKBENCH */}
@@ -408,6 +410,14 @@ export default function EceStudioPage() {
             </div>
           )}
 
+          {/* AI Circuit Suggestions & Prompt Engine */}
+          <AiCircuitAssistant
+            components={components}
+            wires={wires}
+            simResult={simResult}
+            onApplyComponentUpdate={handleUpdateProperties}
+          />
+
           {/* Engineering Copilot Q&A */}
           <div className="copilot-card">
             <div className="copilot-header">
@@ -448,6 +458,16 @@ export default function EceStudioPage() {
         onClose={() => setIsCommunityModalOpen(false)}
         onLoadCircuit={handleSelectPreset}
         onSaveCurrentCircuit={handleSaveCurrentCircuit}
+      />
+
+      {/* Syllabus Preset Folders Modal */}
+      <PresetsDrawerModal
+        isOpen={isPresetsModalOpen}
+        onClose={() => setIsPresetsModalOpen(false)}
+        onSelectPreset={(presetId) => {
+          handleSelectPreset(presetId);
+          setIsPresetsModalOpen(false);
+        }}
       />
     </div>
   );
