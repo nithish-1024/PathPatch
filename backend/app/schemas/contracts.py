@@ -39,12 +39,23 @@ class AuthResponse(StrictModel):
     user: UserResponse
 
 
+class PlainEnglishSummary(StrictModel):
+    what_is_happening: str
+    why_it_fails: str
+    how_to_fix_it: str
+    layman_analogy: str = ""
+
+
 class AnalyzeRequest(StrictModel):
     title: str = Field(min_length=1, max_length=255)
     raw_input: str = Field(min_length=1, max_length=100_000)
     analysis_type: Literal["repository", "circuit", "truss", "beam", "idea"] = "idea"
     department_lens: Literal["auto", "cse", "ece", "civil", "mechanical", "all_department_dt"] = "auto"
     repository_files: dict[str, str] | None = None
+    circuit_params: dict[str, Any] | None = None
+    truss_params: dict[str, Any] | None = None
+    beam_params: dict[str, Any] | None = None
+    user_question: str | None = None
 
     @field_validator("title", "raw_input", mode="before")
     @classmethod
@@ -119,4 +130,18 @@ class RunResponse(StrictModel):
     upskilled_blueprint_json: dict[str, Any] | None
     analysis_json: dict[str, Any]
     created_at: str
+
+
+class AskRequest(StrictModel):
+    analysis_type: Literal["repository", "circuit", "truss", "beam", "idea"] = "circuit"
+    user_question: str = Field(min_length=1, max_length=1000)
+    context_state: dict[str, Any] | None = None
+    run_id: str | None = None
+
+
+class AskResponse(StrictModel):
+    answer: str
+    source: Literal["physics_rule_engine", "gemini_flash_enhancer"]
+    suggested_action: str | None = None
+
 

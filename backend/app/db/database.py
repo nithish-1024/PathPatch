@@ -9,18 +9,41 @@ def is_production() -> bool:
 
 
 def resolve_database_url() -> str:
+    # Check all common Vercel / Neon / Supabase environment variable names
     url = (
         os.getenv("PATCHPATH_DATABASE_URL")
         or os.getenv("POSTGRES_URL")
         or os.getenv("DATABASE_URL")
-        or os.getenv("STORAGE_URL")
         or os.getenv("STORAGE_POSTGRES_URL")
+        or os.getenv("STORAGE_DATABASE_URL")
+        or os.getenv("STORAGE_URL")
+        or os.getenv("STORAGE_POSTGRES_PRISMA_URL")
+        or os.getenv("STORAGE_POSTGRES_URL_NON_POOLING")
+        or os.getenv("POSTGRES_PRISMA_URL")
+        or os.getenv("POSTGRES_URL_NON_POOLING")
+        or os.getenv("NEON_DATABASE_URL")
     )
+
+    # Dynamic fallback: check any environment variable ending in _URL or containing POSTGRES/DATABASE
+    if not url:
+        for key, val in os.environ.items():
+            if not isinstance(val, str):
+                continue
+            cleaned = val.strip()
+            if (
+                key.endswith("_URL")
+                or "POSTGRES" in key
+                or "DATABASE" in key
+                or "STORAGE" in key
+            ) and (cleaned.startswith("postgres://") or cleaned.startswith("postgresql://")):
+                url = cleaned
+                break
+
     if is_production():
         if not url:
             raise RuntimeError(
                 "Production database URL is missing. Set PATCHPATH_DATABASE_URL "
-                "or connect Neon Postgres (POSTGRES_URL) in Vercel environment settings. "
+                "or connect Neon Postgres (POSTGRES_URL or STORAGE_URL) in Vercel environment settings. "
                 "Local SQLite fallback is disabled in production."
             )
     else:

@@ -64,6 +64,43 @@ export interface CandidatePlan {
   scenario?: Record<string, number>;
 }
 
+export interface PlainEnglishSummary {
+  what_is_happening: string;
+  why_it_fails: string;
+  how_to_fix_it: string;
+  layman_analogy?: string;
+}
+
+export interface CircuitParams {
+  board_mode?: "pcb" | "breadboard";
+  vin?: number;
+  vout?: number;
+  iload_a?: number;
+  ambient_c?: number;
+  ac_dc_stage?: "transformer" | "capacitive_dropper" | "buck_module";
+  components?: string[];
+}
+
+export interface TrussParams {
+  point_load_kn?: number;
+  span_m?: number;
+  member_area_mm2?: number;
+}
+
+export interface BeamParams {
+  load_kn?: number;
+  span_m?: number;
+  width_mm?: number;
+  depth_mm?: number;
+  modulus_gpa?: number;
+}
+
+export interface AskResponse {
+  answer: string;
+  source: "physics_rule_engine" | "gemini_flash_enhancer";
+  suggested_action?: string;
+}
+
 export interface AnalysisRun {
   id: string;
   mode: Mode;
@@ -74,6 +111,8 @@ export interface AnalysisRun {
   candidate_plans_json: CandidatePlan[];
   upskilled_blueprint_json?: Record<string, unknown> | null;
   analysis_json: Record<string, any> & { health_score?: { score: number; label: string; factors: string[]; method: string } };
+  plain_english_summary?: PlainEnglishSummary;
+  interactive_controls?: Record<string, any>;
   created_at: string;
 }
 

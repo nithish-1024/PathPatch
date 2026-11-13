@@ -1,10 +1,14 @@
-import type { AnalysisRun, AuthSession, ProgressEvent, User } from "../types/patchpath";
+import type { AnalysisRun, AskResponse, AuthSession, BeamParams, CircuitParams, ProgressEvent, TrussParams, User } from "../types/patchpath";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const storedKey = typeof window !== "undefined" ? sessionStorage.getItem("patchpath_gemini_key") : null;
+  if (storedKey && !headers.has("X-Gemini-Key")) {
+    headers.set("X-Gemini-Key", storedKey.trim());
+  }
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: "include" });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
@@ -36,7 +40,36 @@ export const api = {
   logout: () => request<{ status: string }>("/api/v1/auth/logout", { method: "POST" }),
   me: () => request<User>("/api/v1/auth/me"),
   runs: () => request<AnalysisRun[]>("/api/v1/runs"),
-  analyze: (title: string, raw_input: string, department_lens: string, analysis_type: "repository" | "circuit" | "truss" | "beam" | "idea", repository_files?: Record<string, string>) => request<AnalysisRun>("/api/v1/upskiller/analyze", { method: "POST", body: JSON.stringify({ title, raw_input, department_lens, analysis_type, ...(repository_files ? { repository_files } : {}) }) }),
+  analyze: (
+    title: string,
+    raw_input: string,
+    department_lens: string,
+    analysis_type: "repository" | "circuit" | "truss" | "beam" | "idea",
+    repository_files?: Record<string, string>,
+    circuit_params?: CircuitParams,
+    truss_params?: TrussParams,
+    beam_params?: BeamParams,
+    user_question?: string,
+  ) =>
+    request<AnalysisRun>("/api/v1/upskiller/analyze", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        raw_input,
+        department_lens,
+        analysis_type,
+        ...(repository_files ? { repository_files } : {}),
+        ...(circuit_params ? { circuit_params } : {}),
+        ...(truss_params ? { truss_params } : {}),
+        ...(beam_params ? { beam_params } : {}),
+        ...(user_question ? { user_question } : {}),
+      }),
+    }),
+  ask: (analysis_type: string, user_question: string, context_state?: Record<string, unknown>, run_id?: string) =>
+    request<AskResponse>("/api/v1/ask", {
+      method: "POST",
+      body: JSON.stringify({ analysis_type, user_question, context_state, run_id }),
+    }),
   latestSimulation: (runId: string) => request<{ execution_id?: string; status: string; result?: Record<string, unknown>; error?: string; logs: ProgressEvent[] }>(`/api/v1/runs/${runId}/latest-simulation`),
   simulationStatus: (executionId: string) => request<{ execution_id: string; status: string; result?: Record<string, unknown>; error?: string; logs: ProgressEvent[] }>(`/api/v1/simulations/${executionId}`),
 };

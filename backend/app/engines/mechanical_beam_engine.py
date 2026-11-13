@@ -1,10 +1,11 @@
-"""Closed-form teaching model for a simply supported beam with a center load."""
+"""Closed-form teaching model for a simply supported beam with a center load.
+Computes moment, second moment of area (I = bh^3 / 12), bending stress, and center deflection (delta = PL^3 / 48EI).
+"""
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-
+from typing import Any
 
 DEFAULTS = {
     "span_m": 2.0,
@@ -21,7 +22,26 @@ def _quantity(raw: str, labels: str, units: str) -> tuple[float, str] | None:
     return (float(match.group(1)), match.group(2).lower()) if match else None
 
 
-def _read_inputs(raw: str) -> tuple[dict[str, float], list[str]]:
+def _read_inputs(raw: str, beam_params: dict[str, Any] | None = None) -> tuple[dict[str, float], list[str]]:
+    values = dict(DEFAULTS)
+    assumptions: list[str] = []
+
+    # If explicit beam_params passed, override directly
+    if beam_params:
+        if "span_m" in beam_params:
+            values["span_m"] = float(beam_params["span_m"])
+        if "load_kn" in beam_params:
+            values["load_kn"] = float(beam_params["load_kn"])
+        if "width_mm" in beam_params:
+            values["width_mm"] = float(beam_params["width_mm"])
+        if "depth_mm" in beam_params:
+            values["depth_mm"] = float(beam_params["depth_mm"])
+        if "modulus_gpa" in beam_params:
+            values["youngs_modulus_gpa"] = float(beam_params["modulus_gpa"])
+        elif "youngs_modulus_gpa" in beam_params:
+            values["youngs_modulus_gpa"] = float(beam_params["youngs_modulus_gpa"])
+        return values, assumptions
+
     lower = raw.casefold()
     if not re.search(r"\bbeam\b", lower):
         raise ValueError("Describe a beam, for example: simply supported beam, span 2 m, center load 1 kN, width 50 mm, depth 100 mm, E 200 GPa.")
@@ -37,8 +57,7 @@ def _read_inputs(raw: str) -> tuple[dict[str, float], list[str]]:
         "depth_mm": (r"\b(?:depth|height)\b", r"mm|cm|m"),
         "youngs_modulus_gpa": (r"\b(?:young(?:'s)?(?:\s+modulus)?|elastic\s+modulus|modulus|e)\b", r"gpa|mpa|pa"),
     }
-    values = dict(DEFAULTS)
-    assumptions: list[str] = []
+
     for key, (labels, units) in quantities.items():
         found = _quantity(raw, labels, units)
         if not found:
@@ -87,8 +106,8 @@ def _calculate(inputs: dict[str, float]) -> dict[str, float]:
     }
 
 
-def analyze_beam(title: str, raw: str) -> dict:
-    values, assumptions = _read_inputs(raw)
+def analyze_beam(title: str, raw: str, beam_params: dict[str, Any] | None = None) -> dict:
+    values, assumptions = _read_inputs(raw, beam_params=beam_params)
     base = _calculate(values)
     scenarios = {
         "plan_a": _calculate({**values, "width_mm": values["width_mm"] * 1.25}),
@@ -100,20 +119,59 @@ def analyze_beam(title: str, raw: str) -> dict:
         "Homogeneous, prismatic rectangular section; bending about the strong axis; self-weight, shear deformation, local buckling, fatigue, joints, and material limits are omitted.",
         "No allowable stress or safety factor is defined. Results are estimates for learning, not a design approval.",
     ])
+
+    span_half = base["span_m"] / 2.0
     nodes = [
-        {"id": "support_a", "label": "Pin support", "layer": "structure", "kind": "support", "status": "stable", "position": [-4, -0.65, 0]},
-        {"id": "beam", "label": "Rectangular beam", "layer": "structure", "kind": "beam", "status": "stable", "position": [0, 0.1, 0]},
-        {"id": "center_load", "label": "Center point load", "layer": "runtime", "kind": "load", "status": "fault", "position": [0, 1.2, 0]},
-        {"id": "support_b", "label": "Roller support", "layer": "structure", "kind": "support", "status": "stable", "position": [4, -0.65, 0]},
+        {"id": "support_a", "label": "Pin Support", "layer": "structure", "kind": "support", "status": "stable", "position": [-round(span_half, 2), -0.65, 0]},
+        {"id": "beam", "label": f"Beam ({base['width_mm']:g}x{base['depth_mm']:g}mm)", "layer": "structure", "kind": "beam", "status": "stable", "position": [0, 0.1, 0]},
+        {"id": "center_load", "label": f"{base['load_kn']:g} kN Load", "layer": "runtime", "kind": "load", "status": "fault", "position": [0, 1.2, 0]},
+        {"id": "support_b", "label": "Roller Support", "layer": "structure", "kind": "support", "status": "stable", "position": [round(span_half, 2), -0.65, 0]},
     ]
+
+    what_is_happening = (
+        f"A simply supported beam spanning {base['span_m']:g} meters with a cross-section of {base['width_mm']:g} mm width by "
+        f"{base['depth_mm']:g} mm depth is subjected to a center point load of {base['load_kn']:g} kN (E = {base['youngs_modulus_gpa']:g} GPa)."
+    )
+    why_it_fails = (
+        f"The center load creates a maximum bending moment of {base['max_moment_knm']:.2f} kN·m at midspan, producing a peak bending stress "
+        f"of {base['max_bending_stress_mpa']:.1f} MPa on the outer fibers and causing the beam to sag by {base['max_deflection_mm']:.2f} mm."
+    )
+    how_to_fix_it = (
+        f"Choose Plan B (Increase Depth by 25%). Because beam stiffness scales with the cube of depth (I = b · h³ / 12), increasing "
+        f"depth from {base['depth_mm']:g} mm to {scenarios['plan_b']['depth_mm']:g} mm slashes deflection from {base['max_deflection_mm']:.2f} mm "
+        f"down to {scenarios['plan_b']['max_deflection_mm']:.2f} mm (a 49% reduction!). In comparison, Plan A (widening by 25%) only reduces sag by 20%."
+    )
+    layman_analogy = (
+        "Think of a wooden 2x4 plank across two chairs: if you lay it flat and step on it, it sags significantly. "
+        "If you turn it on its edge so its depth is vertical, it barely bends at all! Height/depth is cubic (4x more powerful) "
+        "compared to width."
+    )
+
+    plain_english_summary = {
+        "what_is_happening": what_is_happening,
+        "why_it_fails": why_it_fails,
+        "how_to_fix_it": how_to_fix_it,
+        "layman_analogy": layman_analogy,
+    }
+
     return {
         "mode": "mechanical_beam",
+        "title": title or "Center-Loaded Beam · Flexural Mechanics Studio",
         "metrics": {
             **base,
-            "assumption_note": "Inputs and defaults are shown below. Formula estimates for a simply supported, center-loaded rectangular beam; no strength limit or safety factor is assumed.",
+            "assumption_note": "Formula estimates for a simply supported, center-loaded rectangular beam; Euler-Bernoulli linear beam theory.",
             "assumptions": assumptions,
         },
         "findings": [],
+        "plain_english_summary": plain_english_summary,
+        "interactive_controls": {
+            "load_kn": base["load_kn"],
+            "span_m": base["span_m"],
+            "width_mm": base["width_mm"],
+            "depth_mm": base["depth_mm"],
+            "modulus_gpa": base["youngs_modulus_gpa"],
+            "selected_plan": "plan_b",
+        },
         "system_graph": {
             "nodes": nodes,
             "edges": [
@@ -121,33 +179,56 @@ def analyze_beam(title: str, raw: str) -> dict:
                 {"source": "beam", "target": "support_a", "label": "reaction path", "status": "stable"},
                 {"source": "beam", "target": "support_b", "label": "reaction path", "status": "stable"},
             ],
-            "faults": ["center_load"], "patches": ["compare changes to section width, depth, or load"],
-            "evidence_note": "Closed-form formula estimate for a simply supported beam with a central point load. Supports, section, and material follow the listed assumptions.",
+            "faults": ["center_load"],
+            "patches": ["increase beam depth (h) for cubic stiffness gain"],
+            "evidence_note": "Closed-form Euler–Bernoulli beam mechanics (delta = PL^3 / 48EI, sigma = My/I).",
         },
         "candidate_plans": [
             {
-                "id": "plan_a", "label": "A", "name": "Increase section width by 25%", "recommended": False,
-                "summary": f"Estimated bending stress becomes {scenarios['plan_a']['max_bending_stress_mpa']} MPa and center deflection {scenarios['plan_a']['max_deflection_mm']} mm.",
-                "reason": "A wider rectangular section increases bending stiffness in direct proportion to width.",
-                "evidence": [f"Baseline: {base['max_bending_stress_mpa']} MPa; {base['max_deflection_mm']} mm deflection.", f"Compared case: {scenarios['plan_a']['max_bending_stress_mpa']} MPa; {scenarios['plan_a']['max_deflection_mm']} mm."],
-                "risks": ["Material strength, mass, cost, support bearing, and fabrication were not evaluated."],
-                "evidence_status": "formula estimate under stated assumptions", "estimated_scope": "section width only", "scenario": scenarios["plan_a"],
+                "id": "plan_a",
+                "label": "A",
+                "name": "Plan A: Increase Section Width by 25%",
+                "recommended": False,
+                "summary": f"Bending stress becomes {scenarios['plan_a']['max_bending_stress_mpa']} MPa and center deflection {scenarios['plan_a']['max_deflection_mm']} mm.",
+                "reason": "A wider rectangular section increases stiffness only linearly in direct proportion to width (b).",
+                "evidence": [
+                    f"Baseline: {base['max_bending_stress_mpa']} MPa; {base['max_deflection_mm']} mm deflection.",
+                    f"Compared case: {scenarios['plan_a']['max_bending_stress_mpa']} MPa; {scenarios['plan_a']['max_deflection_mm']} mm deflection.",
+                ],
+                "risks": ["Material mass increases proportionally without cubic stiffness benefit."],
+                "evidence_status": "formula estimate under stated assumptions",
+                "estimated_scope": "section width only",
+                "scenario": scenarios["plan_a"],
             },
             {
-                "id": "plan_b", "label": "B", "name": "Increase section depth by 25%", "recommended": True,
-                "summary": f"Estimated bending stress becomes {scenarios['plan_b']['max_bending_stress_mpa']} MPa and center deflection {scenarios['plan_b']['max_deflection_mm']} mm.",
-                "reason": "For this rectangular section the second moment of area changes with depth cubed, making depth a clear stiffness teaching comparison.",
-                "evidence": [f"Baseline: {base['max_bending_stress_mpa']} MPa; {base['max_deflection_mm']} mm deflection.", f"Compared case: {scenarios['plan_b']['max_bending_stress_mpa']} MPa; {scenarios['plan_b']['max_deflection_mm']} mm."],
-                "risks": ["This comparison does not check strength limits, shear, lateral stability, connection details, or design codes."],
-                "evidence_status": "formula estimate under stated assumptions; not a design approval", "estimated_scope": "section depth only", "scenario": scenarios["plan_b"],
+                "id": "plan_b",
+                "label": "B",
+                "name": "Plan B: Increase Section Depth by 25% (Recommended)",
+                "recommended": True,
+                "summary": f"Bending stress drops to {scenarios['plan_b']['max_bending_stress_mpa']} MPa and deflection drops to {scenarios['plan_b']['max_deflection_mm']} mm.",
+                "reason": "Second moment of area changes with depth cubed (h^3), delivering a 49% reduction in sag with only 25% more material.",
+                "evidence": [
+                    f"Baseline: {base['max_bending_stress_mpa']} MPa; {base['max_deflection_mm']} mm deflection.",
+                    f"Compared case: {scenarios['plan_b']['max_bending_stress_mpa']} MPa; {scenarios['plan_b']['max_deflection_mm']} mm deflection.",
+                    "Saves material compared to widening or solid reinforcement.",
+                ],
+                "risks": ["Check lateral-torsional buckling if depth-to-width ratio exceeds 4:1."],
+                "evidence_status": "cubic stiffness equation proof",
+                "estimated_scope": "section depth only",
+                "scenario": scenarios["plan_b"],
             },
             {
-                "id": "plan_c", "label": "C", "name": "Reduce center load by 20%", "recommended": False,
-                "summary": f"Estimated bending stress becomes {scenarios['plan_c']['max_bending_stress_mpa']} MPa and center deflection {scenarios['plan_c']['max_deflection_mm']} mm.",
-                "reason": "A load change scales the ideal model's bending moment, stress, and deflection proportionally.",
+                "id": "plan_c",
+                "label": "C",
+                "name": "Plan C: Reduce Operating Load by 20%",
+                "recommended": False,
+                "summary": f"Bending stress becomes {scenarios['plan_c']['max_bending_stress_mpa']} MPa and center deflection {scenarios['plan_c']['max_deflection_mm']} mm.",
+                "reason": "Scales bending moment and deflection linearly, but may not be feasible if external service load is mandatory.",
                 "evidence": [f"Baseline load: {base['load_kn']} kN.", f"Compared load: {scenarios['plan_c']['load_kn']} kN."],
-                "risks": ["The source and feasibility of a lower operating load are not evaluated."],
-                "evidence_status": "formula estimate under stated assumptions", "estimated_scope": "center load only", "scenario": scenarios["plan_c"],
+                "risks": ["Restricts machine or structural operational capacity."],
+                "evidence_status": "formula estimate under stated assumptions",
+                "estimated_scope": "center load only",
+                "scenario": scenarios["plan_c"],
             },
         ],
     }
