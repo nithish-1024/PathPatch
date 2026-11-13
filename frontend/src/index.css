@@ -2720,3 +2720,934 @@ a { color: inherit; }
   color: var(--muted);
 }
 .implementation-checklist strong { color: var(--ink); }
+
+
+/* ==========================================================================
+   UNIFIED CLUSTERED EDA STUDIO (TINKERCAD + MULTISIM + KICAD + VIVADO)
+   ========================================================================== */
+
+.eda-studio-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* 1. TOP COMMAND RIBBON */
+.eda-command-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-wrap: wrap;
+}
+.ribbon-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ribbon-brand-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 14px;
+  border-right: 1px solid var(--hairline);
+}
+.brand-bolt {
+  color: #eab308;
+}
+.brand-name {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+.brand-sub {
+  font-size: 10px;
+  color: var(--muted);
+}
+.btn-sim-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-sim-run.running {
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(22, 163, 74, 0.35);
+}
+.btn-sim-run.stopped {
+  background: #ef4444;
+  color: #fff;
+}
+.sim-live-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-block;
+  animation: pulse-ring 1.4s infinite;
+}
+.ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ribbon-btn:hover {
+  background: var(--surface);
+  border-color: var(--hairline-strong);
+}
+.ribbon-btn-danger {
+  color: #ef4444;
+}
+.ribbon-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+.ribbon-view-group {
+  display: flex;
+  align-items: center;
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--hairline);
+}
+.view-pill {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.view-pill.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.wire-color-palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.palette-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.color-swatch-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+.color-swatch-dot:hover {
+  transform: scale(1.25);
+}
+.color-swatch-dot.active {
+  border-color: var(--ink);
+  transform: scale(1.25);
+}
+.preset-selector-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+}
+.preset-icon {
+  color: var(--muted);
+}
+.preset-select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+/* 2. MAIN 3-PANEL WORKBENCH */
+.eda-workbench-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  gap: 16px;
+  padding: 16px 20px 40px;
+  flex: 1;
+}
+@media (max-width: 1280px) {
+  .eda-workbench-layout {
+    grid-template-columns: 260px 1fr;
+  }
+  .eda-right-sidebar {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 900px) {
+  .eda-workbench-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* LEFT DRAWER */
+.eda-component-drawer {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 100px);
+  position: sticky;
+  top: 76px;
+  overflow: hidden;
+}
+.drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-icon {
+  color: #3b82f6;
+}
+.drawer-title-row h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.part-count-badge {
+  font-size: 10px;
+  font-family: var(--mono);
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+.drawer-sub {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.drawer-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+}
+.drawer-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 11px;
+  color: var(--ink);
+}
+.clear-search-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+}
+.drawer-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 85px;
+  overflow-y: auto;
+}
+.cat-pill {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cat-pill.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+.drawer-parts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+.drawer-part-card {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.drawer-part-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.card-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.part-prefix-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #3b82f6;
+}
+.part-name {
+  font-size: 12px;
+  color: var(--ink);
+}
+.part-desc {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.card-pins-row {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.btn-place-part {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.btn-place-part:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+/* CENTER COLUMN */
+.eda-center-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.preset-headline-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  gap: 16px;
+}
+.preset-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.preset-headline-bar h2 {
+  margin: 2px 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.preset-headline-bar p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.headline-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+}
+.stat-pill.active {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+/* CANVAS CONTAINER */
+.canvas-container-box {
+  border-radius: 14px;
+  border: 1px solid var(--hairline);
+  background: #f8fafc;
+  overflow: hidden;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.eda-canvas-wrapper {
+  width: 100%;
+  height: 480px;
+  position: relative;
+  overflow: auto;
+}
+.eda-interactive-canvas-svg {
+  width: 1600px;
+  height: 600px;
+  display: block;
+}
+.canvas-terminal-pin {
+  cursor: crosshair;
+}
+.pin-target-halo {
+  transition: r 0.15s ease, stroke 0.15s ease;
+}
+.canvas-terminal-pin:hover .pin-target-halo {
+  r: 12;
+  stroke: #16a34a;
+  fill: rgba(34, 197, 94, 0.2);
+}
+
+/* INSTRUMENTS DOCK */
+.eda-instruments-dock {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dock-nav-bar {
+  display: flex;
+  align-items: center;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  overflow-x: auto;
+}
+.dock-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border-right: 1px solid #1e293b;
+  white-space: nowrap;
+}
+.dock-tab:hover {
+  color: #f8fafc;
+}
+.dock-tab.active {
+  background: #020617;
+  color: #38bdf8;
+  border-bottom: 2px solid #38bdf8;
+}
+.dock-body-panel {
+  padding: 16px;
+  background: #020617;
+  color: #f8fafc;
+  min-height: 240px;
+}
+
+/* OSCILLOSCOPE STYLES */
+.scope-workbench-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .scope-workbench-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.scope-crt-bezel {
+  background: #090d16;
+  border: 2px solid #1e293b;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+.crt-grid-reticle {
+  background: #020617;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  position: relative;
+  overflow: hidden;
+}
+.crt-svg {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+.crt-telemetry-header {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.telemetry-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.telemetry-pill.ch1 {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+}
+.telemetry-pill.ch2 {
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+}
+.telemetry-pill.time {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+.scope-knobs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.channel-box {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.channel-header {
+  font-size: 11px;
+}
+.channel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.knob-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.knob-row label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+  gap: 8px;
+}
+.knob-row select,
+.knob-row input {
+  background: #020617;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+/* VIVADO ANALYZER */
+.vivado-analyzer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.analyzer-ruler-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #0f172a;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+}
+.ruler-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+.ruler-ticks {
+  display: flex;
+  gap: 20px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: #64748b;
+}
+.analyzer-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.logic-track-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #090d16;
+  border: 1px solid #1e293b;
+}
+.track-label-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.track-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: #facc15;
+}
+.track-label-col small {
+  font-size: 8px;
+  color: #64748b;
+}
+.digital-wave-svg {
+  width: 100%;
+  height: 24px;
+}
+
+/* DMM BENCH VIEW */
+.dmm-workbench-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.fluke-multimeter-chassis {
+  background: #eab308;
+  padding: 8px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  width: min(340px, 100%);
+}
+.dmm-bezel {
+  background: #0f172a;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dmm-brand {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+.dmm-lcd-screen {
+  background: #78909c;
+  border: 2px solid #37474f;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.dmm-digits {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 900;
+  color: #102027;
+  letter-spacing: 0.06em;
+}
+.dmm-unit-badge {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: #263238;
+}
+.dmm-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.dmm-btn {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dmm-btn.active {
+  background: #eab308;
+  color: #0f172a;
+  border-color: #eab308;
+}
+.dmm-jacks-row {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 6px;
+  border-top: 1px solid #1e293b;
+}
+.jack-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.jack-hole {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #000;
+}
+.jack-hole.red-jack { background: #ef4444; }
+.jack-hole.black-jack { background: #020617; }
+.jack-item small {
+  font-size: 8px;
+  color: #94a3b8;
+}
+
+/* NETLIST TABLE */
+.netlist-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.netlist-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.netlist-header-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+.btn-copy-netlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-copy-netlist:hover {
+  background: #334155;
+}
+.eda-netlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.eda-netlist-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #334155;
+  color: #94a3b8;
+  font-weight: 700;
+}
+.eda-netlist-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #1e293b;
+}
+.des-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.voltage-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #22c55e;
+}
+.thermal-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.thermal-tag.hot {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+.thermal-tag.ok {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+/* RIGHT COLUMN */
+.eda-right-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.component-inspector-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid #3b82f6;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.desig-pill {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 11px;
+  background: #3b82f6;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.inspector-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.inspector-cat {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.inspector-props-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  font-size: 11px;
+}
+.prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.inspector-live-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.08);
+  font-size: 11px;
+}
+.inspector-hint {
+  font-size: 9px;
+  color: var(--muted);
+}
+.eda-alerts-card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alert-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #dc2626;
+}
+.alert-head h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+.alert-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 10px;
+  color: #991b1b;
+  line-height: 1.4;
+}
