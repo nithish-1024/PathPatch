@@ -491,14 +491,28 @@ export class EdaSimulationEngine {
         ch2Samples.push(capV);
       } else if (acSource) {
         // CH1: AC input sine wave
-        const f = acSource.state?.frequency ?? 1000;
-        const vIn = Math.sin(2 * Math.PI * f * sampleT) * 1.5;
+        const f = acSource.state?.frequency ?? 50;
+        const amp = Number(acSource.properties.amplitudeV ?? 12.0);
+        const vIn = Math.sin(2 * Math.PI * f * sampleT) * amp;
         ch1Samples.push(vIn);
-        // CH2: Amplified inverted output if Op-Amp exists, else rectified wave
-        if (opAmp) {
-          ch2Samples.push(Math.max(-10, Math.min(10, -10.0 * vIn)));
+
+        const bjt = components.find((c) => c.type === "BJT_NPN" || c.type === "TRANSISTOR_NPN_BC547");
+        const hasDiode = components.some((c) => c.type === "DIODE_RECTIFIER" || c.type === "DIODE_1N4148");
+        const hasFilterCap = components.some((c) => c.type === "CAPACITOR_ELECTROLYTIC");
+
+        if (opAmp || bjt) {
+          // BJT / Op-Amp 180° phase-inverted and amplified
+          ch2Samples.push(Math.max(-12, Math.min(12, -4.5 * Math.sin(2 * Math.PI * f * sampleT))));
+        } else if (hasDiode && hasFilterCap) {
+          // Year 1 Bridge Rectifier with smoothing capacitor (DC with slight ripple)
+          const vDcPeak = Math.max(0, amp - 1.4);
+          const ripple = Math.sin(4 * Math.PI * f * sampleT) * (vDcPeak * 0.04);
+          ch2Samples.push(vDcPeak - Math.abs(ripple));
+        } else if (hasDiode) {
+          // Raw full-wave pulsating DC
+          ch2Samples.push(Math.max(0, Math.abs(vIn) - 1.4));
         } else {
-          ch2Samples.push(Math.abs(vIn) - 0.7 > 0 ? Math.abs(vIn) - 0.7 : 0);
+          ch2Samples.push(vIn);
         }
       } else if (buck) {
         // CH1: Switching ripple (50mV p-p at 300kHz)

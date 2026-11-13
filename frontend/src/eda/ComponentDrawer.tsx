@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { ComponentCategory, EdaComponentDef } from "./types";
 import { EDA_COMPONENT_CATALOG } from "./componentsCatalog";
+import { ComponentGlyph } from "./ComponentGlyphs";
 
 interface ComponentDrawerProps {
   onAddComponent: (def: EdaComponentDef) => void;
@@ -96,6 +97,11 @@ export default function ComponentDrawer({ onAddComponent }: ComponentDrawerProps
             <div className="card-top-row">
               <span className="part-prefix-badge">{def.prefix}</span>
               <strong className="part-name">{def.name}</strong>
+            </div>
+
+            {/* Tinkercad Authentic SVG Component Glyph Preview */}
+            <div className="card-glyph-container" aria-hidden="true">
+              <ComponentGlyph type={def.type} width={56} height={36} />
             </div>
 
             <p className="part-desc">{def.description}</p>

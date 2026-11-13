@@ -17,11 +17,132 @@ function findDef(type: string) {
   return def;
 }
 
-// 1. NE555 Timer Astable Oscillator Preset
+// 1. Year 1: Full-Wave Bridge Rectifier with Capacitor Filter (BEEE / EDC Syllabus)
+const PRESET_BRIDGE_RECTIFIER: EdaPreset = {
+  id: "bridge_rectifier",
+  name: "Year 1: Full-Wave Bridge Rectifier with Filter",
+  badge: "Year 1 Syllabus (EDC/BEEE)",
+  description:
+    "Full-wave 4-diode (1N4007) bridge rectifier converting 12V AC RMS (50Hz) into smoothed DC. Dual-channel oscilloscope shows raw sinusoidal AC waveform on CH1 and smoothed filtered DC output with ripple on CH2.",
+  instrumentFocus: "oscilloscope",
+  components: [
+    {
+      id: "V_AC",
+      type: "SOURCE_AC",
+      name: "12V AC Transformer Secondary (50Hz)",
+      designator: "V_AC",
+      category: "sources",
+      x: 3,
+      y: 7,
+      rotation: 0,
+      properties: { amplitudeV: 16.97, frequencyHz: 50, waveform: "sine" },
+      pins: findDef("SOURCE_AC").pins,
+    },
+    {
+      id: "D1",
+      type: "DIODE_RECTIFIER",
+      name: "1N4007 Diode (D1)",
+      designator: "D1",
+      category: "semiconductors",
+      x: 9,
+      y: 5,
+      rotation: 0,
+      properties: { forwardV: 0.7 },
+      pins: findDef("DIODE_RECTIFIER").pins,
+    },
+    {
+      id: "D2",
+      type: "DIODE_RECTIFIER",
+      name: "1N4007 Diode (D2)",
+      designator: "D2",
+      category: "semiconductors",
+      x: 13,
+      y: 5,
+      rotation: 0,
+      properties: { forwardV: 0.7 },
+      pins: findDef("DIODE_RECTIFIER").pins,
+    },
+    {
+      id: "D3",
+      type: "DIODE_RECTIFIER",
+      name: "1N4007 Diode (D3)",
+      designator: "D3",
+      category: "semiconductors",
+      x: 9,
+      y: 10,
+      rotation: 0,
+      properties: { forwardV: 0.7 },
+      pins: findDef("DIODE_RECTIFIER").pins,
+    },
+    {
+      id: "D4",
+      type: "DIODE_RECTIFIER",
+      name: "1N4007 Diode (D4)",
+      designator: "D4",
+      category: "semiconductors",
+      x: 13,
+      y: 10,
+      rotation: 0,
+      properties: { forwardV: 0.7 },
+      pins: findDef("DIODE_RECTIFIER").pins,
+    },
+    {
+      id: "C_FILTER",
+      type: "CAPACITOR_ELECTROLYTIC",
+      name: "100µF 25V Electrolytic Filter Cap",
+      designator: "C1",
+      category: "passives",
+      x: 18,
+      y: 7,
+      rotation: 90,
+      properties: { capacitanceUf: 100 },
+      pins: findDef("CAPACITOR_ELECTROLYTIC").pins,
+    },
+    {
+      id: "R_LOAD",
+      type: "RESISTOR",
+      name: "1kΩ Load Resistor",
+      designator: "RL",
+      category: "passives",
+      x: 23,
+      y: 7,
+      rotation: 90,
+      properties: { resistance: 1000 },
+      pins: findDef("RESISTOR").pins,
+    },
+    {
+      id: "GND1",
+      type: "GROUND",
+      name: "Circuit Ground Reference",
+      designator: "GND1",
+      category: "sources",
+      x: 18,
+      y: 13,
+      rotation: 0,
+      properties: {},
+      pins: findDef("GROUND").pins,
+    },
+  ],
+  wires: [
+    { id: "w1", fromCompId: "V_AC", fromPinId: "out", toCompId: "D1", toPinId: "anode", color: "red", voltage: 12.0, current: 0.05 },
+    { id: "w2", fromCompId: "D1", fromPinId: "anode", toCompId: "D3", toPinId: "cathode", color: "red", voltage: 12.0, current: 0.05 },
+    { id: "w3", fromCompId: "V_AC", fromPinId: "gnd", toCompId: "D2", toPinId: "anode", color: "blue", voltage: 0, current: 0.05 },
+    { id: "w4", fromCompId: "D2", fromPinId: "anode", toCompId: "D4", toPinId: "cathode", color: "blue", voltage: 0, current: 0.05 },
+    { id: "w5", fromCompId: "D1", fromPinId: "cathode", toCompId: "D2", toPinId: "cathode", color: "orange", voltage: 15.5, current: 0.05 },
+    { id: "w6", fromCompId: "D2", fromPinId: "cathode", toCompId: "C_FILTER", toPinId: "pos", color: "orange", voltage: 15.5, current: 0.05 },
+    { id: "w7", fromCompId: "C_FILTER", fromPinId: "pos", toCompId: "R_LOAD", toPinId: "p1", color: "orange", voltage: 15.5, current: 0.015 },
+    { id: "w8", fromCompId: "D3", fromPinId: "anode", toCompId: "D4", toPinId: "anode", color: "black", voltage: 0, current: 0.05 },
+    { id: "w9", fromCompId: "D4", fromPinId: "anode", toCompId: "C_FILTER", toPinId: "neg", color: "black", voltage: 0, current: 0.05 },
+    { id: "w10", fromCompId: "C_FILTER", fromPinId: "neg", toCompId: "R_LOAD", toPinId: "p2", color: "black", voltage: 0, current: 0.015 },
+    { id: "w11", fromCompId: "R_LOAD", fromPinId: "p2", toCompId: "GND1", toPinId: "gnd", color: "black", voltage: 0, current: 0.015 },
+  ],
+};
+
+// 2. NE555 Timer Astable Oscillator Preset
 const PRESET_555: EdaPreset = {
   id: "555_astable",
-  name: "NE555 Timer Astable Pulse Generator",
-  badge: "Tinkercad Classic",
+  name: "Year 2/3: NE555 Timer Astable Pulse Generator",
+  badge: "Year 2/3 Syllabus (Linear ICs)",
   description: "Astable multivibrator circuit producing periodic square-wave clock pulses. Oscilloscope displays output square wave on CH1 and capacitor triangle charge curve on CH2.",
   instrumentFocus: "oscilloscope",
   components: [
@@ -138,11 +259,11 @@ const PRESET_555: EdaPreset = {
   ],
 };
 
-// 2. BJT Common Emitter AC Audio Amplifier (NI Multisim Classic)
+// 3. BJT Common Emitter AC Audio Amplifier (NI Multisim Classic)
 const PRESET_BJT_AMP: EdaPreset = {
   id: "bjt_amplifier",
-  name: "BJT Common Emitter AC Amplifier",
-  badge: "NI Multisim Analog",
+  name: "Year 2: BJT Common Emitter AC Amplifier",
+  badge: "Year 2 Syllabus (Analog Circuits)",
   description: "Small-signal AC audio amplifier utilizing BC547 NPN transistor. Dual-channel oscilloscope captures the 180° phase inversion and 10x voltage amplification between CH1 (Input) and CH2 (Output).",
   instrumentFocus: "oscilloscope",
   components: [
@@ -284,11 +405,11 @@ const PRESET_BJT_AMP: EdaPreset = {
   ],
 };
 
-// 3. Vivado 4-Bit Synchronous Counter to 7-Segment Display
+// 4. Vivado 4-Bit Synchronous Counter to 7-Segment Display
 const PRESET_VIVADO_DIGITAL: EdaPreset = {
   id: "vivado_counter",
-  name: "Vivado 4-Bit Counter with 7-Segment Display",
-  badge: "Vivado Logic Analyzer",
+  name: "Year 3: Vivado 4-Bit Counter with 7-Segment Display",
+  badge: "Year 3 Syllabus (Digital/Vivado)",
   description: "Synchronous 4-bit binary counter driving a common-cathode 7-segment display. The Vivado Timing Waveform Analyzer plots synchronized CLK, Q0, Q1, Q2, and Q3 digital transitions.",
   instrumentFocus: "logic_analyzer",
   components: [
@@ -365,12 +486,12 @@ const PRESET_VIVADO_DIGITAL: EdaPreset = {
   ],
 };
 
-// 4. Switched Buck vs LM7805 Linear Regulator (KiCad Power Benchmark)
+// 5. Year 4 Power Electronics: Switched Buck vs LM7805 Linear Regulator
 const PRESET_POWER_BENCHMARK: EdaPreset = {
   id: "power_benchmark",
-  name: "Switched Buck Converter vs LM7805 Linear",
-  badge: "KiCad & Multisim Power",
-  description: "High-voltage 12V DC input conversion comparison. Highlights the severe thermal runaway of linear regulation (118°C, 2.45W wasted heat) versus synchronous bucking (32°C, 94% efficiency).",
+  name: "Year 4: Switched Buck vs LM7805 Benchmark",
+  badge: "Year 4 Syllabus (Power Electronics)",
+  description: "High-voltage 12V DC input conversion comparison under 500mA load. Highlights the severe thermal runaway of linear regulation (153°C, 3.5W wasted heat) versus synchronous bucking (31°C, 94% efficiency).",
   instrumentFocus: "multimeter",
   components: [
     {
@@ -493,8 +614,9 @@ const PRESET_BLANK: EdaPreset = {
 };
 
 export const EDA_PRESETS: EdaPreset[] = [
-  PRESET_555,
+  PRESET_BRIDGE_RECTIFIER,
   PRESET_BJT_AMP,
+  PRESET_555,
   PRESET_VIVADO_DIGITAL,
   PRESET_POWER_BENCHMARK,
   PRESET_BLANK,

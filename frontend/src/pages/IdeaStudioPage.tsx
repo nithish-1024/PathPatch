@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Cpu,
+  Flame,
   HelpCircle,
   Info,
   Layers,
@@ -17,26 +18,38 @@ import {
 } from "lucide-react";
 import { api } from "../api/client";
 import type { AnalysisRun } from "../types/patchpath";
+import { CONTRADICTION_IDEAS, type ContradictionIdea } from "../data/contradictionIdeas";
 
 export default function IdeaStudioPage() {
   const [run, setRun] = useState<AnalysisRun | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Idea Input State
-  const [ideaTitle, setIdeaTitle] = useState("Smart Solar Microgrid with Battery Storage & IoT Telemetry");
-  const [ideaInput, setIdeaInput] = useState(
-    "Build a smart solar microgrid controller that monitors photovoltaic panel generation, regulates high-voltage solar DC into 14.4V battery charging using MPPT, powers IoT agricultural sensors, and switches to grid backup when battery capacity falls below 20%."
-  );
+  // Active Idea Selection
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string>("solar_microgrid");
+  const selectedIdea = useMemo(() => {
+    return CONTRADICTION_IDEAS.find((i) => i.id === selectedIdeaId) ?? CONTRADICTION_IDEAS[0];
+  }, [selectedIdeaId]);
+
+  // Form input state
+  const [ideaTitle, setIdeaTitle] = useState(selectedIdea.title);
+  const [ideaInput, setIdeaInput] = useState(selectedIdea.concept);
   const [analyzing, setAnalyzing] = useState(false);
+
+  // Synchronize inputs when a preset idea is clicked
+  const handleSelectIdea = (idea: ContradictionIdea) => {
+    setSelectedIdeaId(idea.id);
+    setIdeaTitle(idea.title);
+    setIdeaInput(idea.concept);
+  };
 
   // Copilot Q&A
   const [question, setQuestion] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [chatLog, setChatLog] = useState<Array<{ q: string; a: string; source: string }>>([
     {
-      q: "What is the primary bottleneck in this solar microgrid idea?",
-      a: "The primary bottleneck is in Stage 2 (Charge Regulation & Conversion). If a linear regulator or passive PWM shunt is used instead of a synchronous MPPT buck stage, 25-35% of solar energy is dumped as pure waste heat, causing thermal runaway in the enclosure and degrading LiFePO4 battery lifespan.",
-      source: "architecture_engine",
+      q: "What makes the naive approach to this architecture fatal?",
+      a: "The fatal bottleneck in naive designs is almost always underestimating thermal dissipation (P = ΔV × I), dv/dt Miller cross-conduction, or galvanic electrolysis. Our Lead Engineering Contradictor strips out textbook hacks and enforces synchronous switching, active balancing, and hardware fail-safes.",
+      source: "lead_contradictor_engine",
     },
   ]);
 
@@ -66,7 +79,7 @@ export default function IdeaStudioPage() {
       const nextRun = await api.analyze(ideaTitle, ideaInput, "auto", "idea");
       setRun(nextRun);
     } catch {
-      // Fallback stays active
+      // Retain active blueprint
     } finally {
       setAnalyzing(false);
     }
@@ -87,7 +100,7 @@ export default function IdeaStudioPage() {
         ...prev,
         {
           q,
-          a: "Calculated from first principles: The critical path bottleneck is in power conditioning efficiency and thermal management. Using a switched synchronous stage recovers over 92% efficiency and isolates inductive kickback.",
+          a: `Calculated from first principles for "${selectedIdea.title}": The primary bottleneck is in ${selectedIdea.bottleneck.stage}. Eliminating passive resistance and implementing ${selectedIdea.hardenedBlueprint.topology} guarantees ${selectedIdea.hardenedBlueprint.metrics[0].value} performance.`,
           source: "physics_rule_engine",
         },
       ]);
@@ -96,46 +109,6 @@ export default function IdeaStudioPage() {
     }
   };
 
-  // 5-Stage Architectural Pipeline
-  const architectureStages = [
-    {
-      step: "01",
-      name: "Input & Sensing",
-      desc: "Photovoltaic panel string (18V-36V Voc) + ACS712 current & voltage sensing",
-      status: "nominal",
-      statusText: "Operational",
-    },
-    {
-      step: "02",
-      name: "Power Conditioning",
-      desc: "Buck charge controller & DC-DC step-down stage (36V -> 14.4V rail)",
-      status: "bottleneck",
-      statusText: "Critical Bottleneck",
-      highlight: true,
-    },
-    {
-      step: "03",
-      name: "Energy Storage",
-      desc: "4S LiFePO4 12.8V 100Ah battery bank + hardware BMS protection",
-      status: "nominal",
-      statusText: "Operational",
-    },
-    {
-      step: "04",
-      name: "Control & Logic",
-      desc: "Dual-core ESP32 MCU running MPPT perturb-and-observe control loop",
-      status: "nominal",
-      statusText: "Operational",
-    },
-    {
-      step: "05",
-      name: "Telemetry & Cloud",
-      desc: "MQTT protocol over Wi-Fi / LTE-M to Grafana monitoring dashboard",
-      status: "nominal",
-      statusText: "Operational",
-    },
-  ];
-
   return (
     <div className="idea-studio-shell">
       {/* 1. Header Banner */}
@@ -143,18 +116,49 @@ export default function IdeaStudioPage() {
         <div className="hero-content">
           <div className="kicker-row">
             <span className="dot-kicker green" />
-            <span className="kicker-title">SYSTEM ARCHITECTURE STUDIO</span>
+            <span className="kicker-title">SYSTEM ARCHITECTURE STUDIO & RED-TEAM CONTRADICTOR</span>
           </div>
-          <h2>Deconstruct any engineering concept into a validated 5-stage architecture.</h2>
+          <h2>Deconstruct any complex engineering idea into a validated 5-stage architecture.</h2>
           <p className="hero-desc">
-            Enter any hardware, software, or IoT idea. The deterministic physics and architecture engine maps the
-            subsystem flow, isolates the single critical failure bottleneck, and generates a recommended production
-            blueprint.
+            Audited by our Lead Engineering Contradictor subagent. Zero 3D model clutter, zero academic jargon.
+            Every idea is stressed to its physical failure bottleneck, amateur textbook hacks are brutally torn down,
+            and a single production-hardened blueprint is delivered with exact silicon part numbers and firmware fail-safes.
           </p>
         </div>
       </section>
 
-      {/* 2. Concept Input Form */}
+      {/* 2. 10 Contradiction-Hardened Idea Quick Selector */}
+      <section className="idea-catalog-section" aria-label="10 Contradicted Ideas">
+        <div className="section-header-row">
+          <div>
+            <span className="mini-badge">CONTRADICTION BENCHMARK SUITE</span>
+            <h3>10 Audited Engineering Architectures</h3>
+          </div>
+          <span className="tag-pill">Red-Team Hardened</span>
+        </div>
+
+        <div className="idea-pills-grid">
+          {CONTRADICTION_IDEAS.map((idea) => {
+            const isSelected = idea.id === selectedIdeaId;
+            return (
+              <button
+                key={idea.id}
+                type="button"
+                className={`idea-pill-card ${isSelected ? "selected" : ""}`}
+                onClick={() => handleSelectIdea(idea)}
+              >
+                <div className="pill-top">
+                  <span className="pill-category">{idea.category}</span>
+                  {isSelected && <span className="pill-active-badge">Active</span>}
+                </div>
+                <strong className="pill-title">{idea.title}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 3. Concept Input / Custom Modification Form */}
       <section className="idea-input-section">
         <form className="idea-input-card" onSubmit={handleAnalyze}>
           <div className="form-row-title">
@@ -164,7 +168,7 @@ export default function IdeaStudioPage() {
               type="text"
               value={ideaTitle}
               onChange={(e) => setIdeaTitle(e.target.value)}
-              placeholder="e.g., Smart Solar Microgrid, Hospital Patient Triage..."
+              placeholder="e.g., Smart Solar Microgrid, Quadcopter Drone..."
               required
             />
           </div>
@@ -173,10 +177,10 @@ export default function IdeaStudioPage() {
             <label htmlFor="idea-desc">System Concept & Functional Requirements</label>
             <textarea
               id="idea-desc"
-              rows={4}
+              rows={3}
               value={ideaInput}
               onChange={(e) => setIdeaInput(e.target.value)}
-              placeholder="Describe the inputs, power sources, processors, actuators, and expected outputs..."
+              placeholder="Describe inputs, power sources, processors, actuators, and expected outputs..."
               required
             />
           </div>
@@ -184,27 +188,27 @@ export default function IdeaStudioPage() {
           <div className="form-submit-row">
             <div className="helper-note">
               <Sparkles size={14} />
-              <span>Evaluates system efficiency, thermal dissipation, and hardware failure modes.</span>
+              <span>Calculates junction temperatures (Tj), switching dv/dt, and failure bottlenecks.</span>
             </div>
             <button type="submit" className="button button-ink" disabled={analyzing}>
-              {analyzing ? "Evaluating Architecture..." : <>⚡ Generate 5-Stage Architecture</>}
+              {analyzing ? "Evaluating Physics..." : <>⚡ Re-Evaluate Architecture</>}
             </button>
           </div>
         </form>
       </section>
 
-      {/* 3. Calm 5-Stage Architecture Pipeline (Zero 3D Clutter) */}
+      {/* 4. Calm 5-Stage Architecture Pipeline (Zero 3D Clutter) */}
       <section className="pipeline-section">
         <div className="section-header-row">
           <div>
-            <span className="mini-badge">STAGE-BY-STAGE SUBSYSTEM DECOMPOSITION</span>
+            <span className="mini-badge">STAGE-BY-STAGE SUBSYSTEM FLOW</span>
             <h3>5-Stage Subsystem Architecture</h3>
           </div>
           <span className="tag-pill">End-to-End Pipeline</span>
         </div>
 
         <div className="pipeline-cards-row">
-          {architectureStages.map((st, i) => (
+          {selectedIdea.stages.map((st, i) => (
             <div key={st.step} className={`pipeline-card ${st.highlight ? "bottleneck-card" : ""}`}>
               <div className="pipeline-top">
                 <span className="stage-num">{st.step}</span>
@@ -214,13 +218,38 @@ export default function IdeaStudioPage() {
               </div>
               <h4 className="stage-name">{st.name}</h4>
               <p className="stage-desc">{st.desc}</p>
-              {i < architectureStages.length - 1 && <div className="pipeline-arrow"><ArrowRight size={14} /></div>}
+              {i < selectedIdea.stages.length - 1 && (
+                <div className="pipeline-arrow">
+                  <ArrowRight size={14} />
+                </div>
+              )}
             </div>
           ))}
         </div>
       </section>
 
-      {/* 4. Two-Column Deep Dive: Isolated Bottleneck + Single Recommended Blueprint */}
+      {/* 5. Brutal Contradiction Strip */}
+      <section className="contradiction-banner">
+        <div className="contradiction-box">
+          <div className="contra-left">
+            <span className="contra-badge amateur">
+              <Flame size={13} />
+              Amateur / Textbook Hack (Torn Down)
+            </span>
+            <p className="contra-quote">&ldquo;{selectedIdea.contradiction.myth}&rdquo;</p>
+          </div>
+          <div className="contra-divider" />
+          <div className="contra-right">
+            <span className="contra-badge truth">
+              <ShieldAlert size={13} />
+              First-Principles Reality (Lead Contradictor)
+            </span>
+            <p className="contra-reality">{selectedIdea.contradiction.brutalTruth}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Two-Column Deep Dive: Isolated Bottleneck + Single Recommended Blueprint */}
       <div className="architecture-deep-grid">
         {/* Left Column: Isolated Bottleneck */}
         <div className="bottleneck-detail-card">
@@ -228,90 +257,131 @@ export default function IdeaStudioPage() {
             <ShieldAlert size={18} />
             <div>
               <span className="alert-kicker">ISOLATED FAILURE BOTTLENECK</span>
-              <h4>Stage 2: Power Regulation & Voltage Differential</h4>
+              <h4>{selectedIdea.bottleneck.stage}</h4>
             </div>
           </div>
 
           <div className="bottleneck-body">
             <div className="detail-item">
               <span className="detail-label">Failure Mechanism</span>
-              <p>
-                Solar panels output 36V open-circuit. Stepping down to 14.4V battery voltage with a linear or PWM
-                shunt regulator creates a 21.6V differential drop. At 5A peak sunlight, this burns over{" "}
-                <strong>108 Watts of pure heat</strong> inside the enclosure.
-              </p>
+              <p>{selectedIdea.bottleneck.mechanism}</p>
             </div>
 
+            {selectedIdea.bottleneck.mathFormula && (
+              <div className="detail-item math-box">
+                <span className="detail-label">Governing Physics Formula</span>
+                <code>{selectedIdea.bottleneck.mathFormula}</code>
+              </div>
+            )}
+
             <div className="detail-item">
-              <span className="detail-label">Primary System Risks</span>
+              <span className="detail-label">Catastrophic Failure Modes</span>
               <ul className="risk-bullets">
-                <li>
-                  <strong>Thermal Runaway:</strong> Junction temperature ($T_J$) will exceed 150°C, causing controller
-                  shutdown or component destruction.
-                </li>
-                <li>
-                  <strong>Solar Harvesting Waste:</strong> Over 30% of captured solar photons are wasted as heat rather
-                  than charging cells.
-                </li>
-                <li>
-                  <strong>Battery Degradation:</strong> Uneven charge currents accelerate LiFePO4 cell capacity loss.
-                </li>
+                {selectedIdea.bottleneck.risks.map((risk, idx) => (
+                  <li key={idx}>{risk}</li>
+                ))}
               </ul>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Single Recommended Production Blueprint */}
+        {/* Right Column: Single Recommended Production Blueprint (No Waste/Non-Waste Options) */}
         <div className="blueprint-hero-card">
           <div className="blueprint-badge">
             <CheckCircle2 size={14} />
             <span>SINGLE RECOMMENDED PRODUCTION BLUEPRINT</span>
           </div>
-          <h3>Synchronous MPPT Buck Stage with Low-RDS(on) MOSFETs</h3>
-          <p className="blueprint-sub">
-            Pin-compatible switched-mode conversion using perturb-and-observe tracking. Eliminates thermal heat sinks and
-            recovers 94% solar conversion efficiency.
-          </p>
+          <h3>{selectedIdea.hardenedBlueprint.title}</h3>
+          <p className="blueprint-sub">{selectedIdea.hardenedBlueprint.sub}</p>
 
           <div className="metric-scorecard-row">
-            <div className="metric-score-box">
-              <span className="metric-label">Solar Yield Gain</span>
-              <strong>+28% to +35%</strong>
-            </div>
-            <div className="metric-score-box">
-              <span className="metric-label">Heat Dissipation</span>
-              <strong className="cool">-82% Reduction</strong>
-            </div>
-            <div className="metric-score-box">
-              <span className="metric-label">Battery Lifespan</span>
-              <strong>3.2x Cycles</strong>
+            {selectedIdea.hardenedBlueprint.metrics.map((m, idx) => (
+              <div key={idx} className="metric-score-box">
+                <span className="metric-label">{m.label}</span>
+                <strong className={m.positive ? "cool" : ""}>{m.value}</strong>
+              </div>
+            ))}
+          </div>
+
+          {/* Core Silicon Components */}
+          <div className="silicon-specs-table">
+            <h5>Verified Hardware Components:</h5>
+            <div className="silicon-rows">
+              {selectedIdea.hardenedBlueprint.silicon.map((s, idx) => (
+                <div key={idx} className="silicon-row">
+                  <span className="silicon-role">{s.role}</span>
+                  <strong className="silicon-part">{s.part}</strong>
+                  <span className="silicon-spec">{s.spec}</span>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Firmware Failsafe */}
+          <div className="firmware-failsafe-box">
+            <h5>Firmware & Hardware Failsafe:</h5>
+            <p>{selectedIdea.hardenedBlueprint.firmwareFailsafe}</p>
+          </div>
+
+          {/* Production Checklist */}
           <div className="implementation-checklist">
             <h5>Production Implementation Steps:</h5>
             <ol>
-              <li>
-                <strong>Switching Topology:</strong> Implement synchronous buck converter with dual N-channel MOSFETs
-                (IRFZ44N / IRLZ44N).
-              </li>
-              <li>
-                <strong>Control Firmware:</strong> Program 20 kHz PWM on ESP32 running Perturb & Observe (P&O) MPPT
-                algorithm.
-              </li>
-              <li>
-                <strong>Thermal Dissipation:</strong> Keep copper fill ground planes under inductors to maintain junction temperature below 40°C.
-              </li>
-              <li>
-                <strong>Telemetry Link:</strong> Transmit panel voltage, charging current, and battery state-of-charge
-                via lightweight MQTT packets.
-              </li>
+              {selectedIdea.hardenedBlueprint.implementationSteps.map((step, idx) => (
+                <li key={idx}>{step}</li>
+              ))}
             </ol>
           </div>
         </div>
       </div>
 
-      {/* 5. Architectural Assistant (Copilot) */}
+      {/* 7. Comprehensive 10-System Contradiction Matrix Table */}
+      <section className="matrix-table-section">
+        <div className="section-header-row">
+          <div>
+            <span className="mini-badge">EXHAUSTIVE CONTRADICTION COMPARISON</span>
+            <h3>Architectural Red-Team Audit Summary</h3>
+          </div>
+          <span className="tag-pill">10 Engineering Domains</span>
+        </div>
+
+        <div className="table-responsive">
+          <table className="contradiction-matrix-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Engineering System</th>
+                <th>Fatal Naive Bottleneck</th>
+                <th>Amateur Hack (Torn Down)</th>
+                <th>Production Hardened Fix</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CONTRADICTION_IDEAS.map((item, idx) => (
+                <tr
+                  key={item.id}
+                  className={item.id === selectedIdeaId ? "active-row" : ""}
+                  onClick={() => handleSelectIdea(item)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td className="idx-col">{idx + 1}</td>
+                  <td className="title-col">
+                    <strong>{item.title.replace(/^\d+\.\s*/, "")}</strong>
+                    <span className="domain-sub">{item.category}</span>
+                  </td>
+                  <td className="bottleneck-col">{item.bottleneck.title}</td>
+                  <td className="amateur-col">{item.contradiction.myth}</td>
+                  <td className="fix-col">
+                    <span className="check-icon">✓</span> {item.hardenedBlueprint.title}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 8. Architectural Assistant (Copilot) */}
       <section className="architecture-copilot-section">
         <div className="copilot-card">
           <div className="copilot-header">
@@ -333,7 +403,7 @@ export default function IdeaStudioPage() {
           <form className="copilot-input-form" onSubmit={handleAsk}>
             <input
               type="text"
-              placeholder="Ask about MPPT algorithm, battery chemistry tradeoffs, sensor selection..."
+              placeholder={`Ask about ${selectedIdea.title}, failure modes, component selections...`}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
