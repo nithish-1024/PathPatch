@@ -132,26 +132,43 @@ def _affected(advisory: dict, version: Version) -> bool:
 
 def parse_manifest(raw: str) -> dict:
     if len(raw.encode("utf-8")) > MAX_MANIFEST_BYTES:
-        raise ValueError("package.json is larger than 100 KB.")
+        raise ValueError("Manifest is larger than 100 KB.")
+
+    # 1. Attempt JSON parsing (package.json)
     try:
         manifest = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid JSON: {exc.msg} at line {exc.lineno}.") from exc
-    if not isinstance(manifest, dict):
-        raise ValueError("package.json must contain a JSON object.")
+        if isinstance(manifest, dict):
+            deps: dict[str, str] = {}
+            for section in ("dependencies", "devDependencies", "optionalDependencies"):
+                section_value = manifest.get(section, {})
+                if isinstance(section_value, dict):
+                    for name, version in section_value.items():
+                        if isinstance(name, str) and isinstance(version, (str, int, float)):
+                            deps[name] = str(version)
+            return {"manifest": manifest, "dependencies": deps, "ecosystem": "npm"}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        pass
+
+    # 2. Attempt requirements.txt parsing (Python/PyPI)
     deps: dict[str, str] = {}
-    for section in ("dependencies", "devDependencies", "optionalDependencies"):
-        section_value = manifest.get(section, {})
-        if not isinstance(section_value, dict):
-            raise ValueError(f"{section} must be a JSON object.")
-        for name, version in section_value.items():
-            if isinstance(name, str) and isinstance(version, (str, int, float)):
-                deps[name] = str(version)
-    return {"manifest": manifest, "dependencies": deps}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("-"):
+            continue
+        m = re.match(r"^([A-Za-z0-9_.\-]+)\s*([=><~!^].*)?$", line)
+        if m:
+            pkg = m.group(1).lower()
+            spec = (m.group(2) or "").strip()
+            deps[pkg] = spec if spec else "any"
+    if deps:
+        manifest_obj = {"name": "python-repo", "dependencies": deps}
+        return {"manifest": manifest_obj, "dependencies": deps, "ecosystem": "PyPI"}
+
+    raise ValueError("Could not parse package.json JSON or requirements.txt manifest.")
 
 
 def fetch_github_package_json(url: str) -> tuple[str, str]:
-    """Fetch a public GitHub repository's package.json and optionally its tree."""
+    """Fetch a public GitHub repository's package.json or requirements.txt manifest."""
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.port not in (None, 443):
         raise ValueError("Repository URL must use https://github.com/owner/repository.")
@@ -163,23 +180,26 @@ def fetch_github_package_json(url: str) -> tuple[str, str]:
     owner, repo = (part.removesuffix(".git") for part in parts)
     if not owner or not repo:
         raise ValueError("Repository owner and name are required.")
-    raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/HEAD/package.json"
-    try:
-        with httpx.Client(timeout=4.0, follow_redirects=False, headers={"Accept": "application/json"}) as client:
-            with client.stream("GET", raw_url) as response:
-                if response.status_code != 200:
-                    raise ValueError("Could not read package.json from that repository. Paste the manifest instead.")
-                chunks = bytearray()
-                for chunk in response.iter_bytes():
-                    chunks.extend(chunk)
-                    if len(chunks) > MAX_MANIFEST_BYTES:
-                        raise ValueError("Remote package.json is larger than 100 KB.")
-    except httpx.HTTPError as exc:
-        raise ValueError("Could not reach the public repository. Paste package.json to analyze offline.") from exc
-    try:
-        return chunks.decode("utf-8"), raw_url
-    except UnicodeDecodeError as exc:
-        raise ValueError("Remote package.json is not valid UTF-8. Paste the manifest instead.") from exc
+
+    candidates = [
+        f"https://raw.githubusercontent.com/{owner}/{repo}/HEAD/package.json",
+        f"https://raw.githubusercontent.com/{owner}/{repo}/HEAD/requirements.txt",
+        f"https://raw.githubusercontent.com/{owner}/{repo}/main/requirements.txt",
+        f"https://raw.githubusercontent.com/{owner}/{repo}/master/requirements.txt",
+    ]
+
+    with httpx.Client(timeout=4.0, follow_redirects=True, headers={"User-Agent": "PatchPath-Universal"}) as client:
+        for candidate_url in candidates:
+            try:
+                resp = client.get(candidate_url)
+                if resp.status_code == 200 and resp.content:
+                    if len(resp.content) > MAX_MANIFEST_BYTES:
+                        raise ValueError("Remote manifest is larger than 100 KB.")
+                    return resp.text, candidate_url
+            except Exception:
+                continue
+
+    raise ValueError("Could not find a package.json or requirements.txt in that repository. Paste the manifest instead.")
 
 
 def fetch_github_repository_tree(url: str) -> list[str]:
@@ -221,12 +241,17 @@ def get_osv_vuln_details(vuln_id: str) -> dict:
 
                 # Determine fixed version
                 fixed_ver = None
+                fixed_versions = []
                 for aff in data.get("affected", []):
                     for r in aff.get("ranges", []):
                         for ev in r.get("events", []):
                             if "fixed" in ev and ev["fixed"]:
-                                fixed_ver = ev["fixed"]
-                                break
+                                fixed_versions.append(ev["fixed"])
+                if fixed_versions:
+                    try:
+                        fixed_ver = sorted(fixed_versions, key=lambda v: [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", v)])[-1]
+                    except Exception:
+                        fixed_ver = fixed_versions[-1]
 
                 # Determine severity
                 severity = "HIGH"
@@ -259,21 +284,22 @@ def get_osv_vuln_details(vuln_id: str) -> dict:
     return fallback
 
 
-def query_osv_batch(package_list: list[tuple[str, str]]) -> dict[str, list[dict]]:
-    """Query OSV.dev batch API with strict 2.5s timeout; falls back gracefully to offline database."""
+def query_osv_batch(package_list: list[tuple[str, str]], ecosystem: str = "npm") -> dict[str, list[dict]]:
+    """Query OSV.dev batch API with strict 3.0s timeout; falls back gracefully to offline database."""
     if not package_list:
         return {}
     queries = []
     for pkg_name, pkg_ver in package_list:
-        clean_ver = pkg_ver.strip().lstrip("^~=v")
-        if _exact_version(clean_ver):
-            queries.append({"package": {"name": pkg_name, "ecosystem": "npm"}, "version": clean_ver})
+        m = re.search(r"([0-9]+(?:\.[0-9]+)*(?:[a-zA-Z0-9.\-_]+)?)", pkg_ver)
+        clean_ver = m.group(1) if m else None
+        if clean_ver:
+            queries.append({"package": {"name": pkg_name, "ecosystem": ecosystem}, "version": clean_ver})
         else:
-            queries.append({"package": {"name": pkg_name, "ecosystem": "npm"}})
+            queries.append({"package": {"name": pkg_name, "ecosystem": ecosystem}})
 
     osv_results: dict[str, list[dict]] = {}
     try:
-        with httpx.Client(timeout=2.5) as client:
+        with httpx.Client(timeout=3.0) as client:
             resp = client.post("https://api.osv.dev/v1/querybatch", json={"queries": queries[:25]})
             if resp.status_code == 200:
                 batch_data = resp.json().get("results", [])
@@ -282,7 +308,7 @@ def query_osv_batch(package_list: list[tuple[str, str]]) -> dict[str, list[dict]
                     vulns = result.get("vulns", [])
                     if vulns:
                         parsed_vulns = []
-                        for v in vulns[:4]:
+                        for v in vulns[:8]:
                             v_id = v.get("id")
                             if v_id:
                                 details = get_osv_vuln_details(v_id)
@@ -304,6 +330,7 @@ def analyze_manifest(
     parsed = parse_manifest(raw)
     manifest = parsed["manifest"]
     dependencies = parsed["dependencies"]
+    ecosystem = parsed.get("ecosystem", "npm")
     resolved_versions = resolved_versions or {}
     findings: list[dict] = []
     uncertainty: list[dict] = []
@@ -343,7 +370,7 @@ def analyze_manifest(
     # Live OSV.dev batch query for all dependencies (discovering CVEs for any random repository)
     packages_to_query = list(dependencies.items())[:30]
     try:
-        osv_batch_findings = query_osv_batch(packages_to_query)
+        osv_batch_findings = query_osv_batch(packages_to_query, ecosystem=ecosystem)
         for pkg_name, vuln_list in osv_batch_findings.items():
             installed_ver_str = dependencies.get(pkg_name, "")
             for vuln in vuln_list:
@@ -485,11 +512,24 @@ def analyze_manifest(
     vuln_pkg_list = sorted(list({f["package"] for f in findings}))
     primary_vuln = vuln_pkg_list[0] if vuln_pkg_list else "declared dependencies"
 
+    def _max_fixed(pkg: str) -> str:
+        versions = [f["fixed"] for f in findings if f["package"] == pkg and f.get("fixed") and f["fixed"] != "Latest patch"]
+        if not versions:
+            return "Latest safe patch"
+        try:
+            return sorted(versions, key=lambda v: [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", v)])[-1]
+        except Exception:
+            return versions[-1]
+
     if "lodash" in vuln_pkg_list:
         patch_target_str = f"lodash to {CURRENT_LODASH_RELEASE}"
         source_link = LODASH_RELEASE_SOURCE
+    elif "python-multipart" in vuln_pkg_list:
+        pm_fixed = _max_fixed("python-multipart")
+        patch_target_str = f"python-multipart to >={pm_fixed}"
+        source_link = "https://github.com/advisories/GHSA-59g5-xgcq-4qw3"
     elif vuln_pkg_list:
-        patch_target_str = ", ".join(f"{p} to safe patch" for p in vuln_pkg_list[:3])
+        patch_target_str = ", ".join(f"{p} to >={_max_fixed(p)}" for p in vuln_pkg_list[:3])
         source_link = findings[0].get("source", "https://osv.dev")
     else:
         patch_target_str = "safe patch versions"
@@ -521,7 +561,7 @@ def analyze_manifest(
             "label": "A",
             "recommended": False,
             "exact_definition": "Bump all packages across the repository to their latest major SemVer releases simultaneously.",
-            "summary": "Upgrade all dependencies to their latest major releases at once (`npm update --save`).",
+            "summary": "Upgrade all dependencies to their latest major releases at once (`npm update --save` or `pip install -U`).",
             "reason": "While this clears older CVE warnings in one command, major version bumps change function signatures, breaking downstream UI and API callers without warning.",
             "evidence": ["No caller compatibility checks were supplied for major version jumps."],
             "risks": ["High risk of breaking API changes and runtime syntax errors across multiple files."],
@@ -535,9 +575,9 @@ def analyze_manifest(
             "label": "C",
             "recommended": False,
             "exact_definition": "Remove external utility libraries entirely and replace vulnerable methods with modern native runtime primitives.",
-            "summary": "Replace vulnerable external helper functions (e.g., deep cloning or merging) with modern native JavaScript/Python methods (`structuredClone`, `fetch`).",
+            "summary": "Replace vulnerable external helper functions (e.g., deep cloning or parsing) with modern native language primitives (`email.message`, `urllib.parse`, `structuredClone`).",
             "reason": "Eliminates third-party supply chain attack surfaces permanently, reducing bundle size, build times, and ongoing maintenance overhead.",
-            "evidence": ["Modern runtime environments natively support structuredClone, Object.assign, and crypto."],
+            "evidence": ["Modern runtime environments natively support structuredClone, standard form parsers, and crypto."],
             "risks": ["Requires writing and testing custom helper routines to ensure identical behavior."],
             "evidence_status": "architectural modernization; requires code changes",
             "estimated_scope": "targeted source file refactoring",
@@ -550,7 +590,7 @@ def analyze_manifest(
         plan_b["reason"] = "No matching vulnerability was detected in the active advisories."
 
     # Build Plain-English Summary for first-time layman users
-    vuln_names = list({f["package"] for f in findings})
+    vuln_names = sorted(list({f["package"] for f in findings}))
     if findings:
         what_is_happening = (
             f"Your project contains {len(dependencies)} connected packages organized across 4 architectural layers "
@@ -558,12 +598,12 @@ def analyze_manifest(
             f"vulnerabilities affecting: {', '.join(vuln_names)}."
         )
         why_it_fails = (
-            f"The installed version of {vuln_names[0]} has security weaknesses (like prototype pollution or code injection) "
-            "that could allow attackers to manipulate server data or cause crashes. However, blindly upgrading all packages "
-            "at once often breaks your existing code."
+            f"The installed version of {vuln_names[0]} has known security vulnerabilities "
+            "(including Denial of Service and parameter parsing flaws) that allow attackers to exhaust server resources. "
+            "However, blindly upgrading all packages at once often breaks existing project code."
         )
         how_to_fix_it = (
-            "We recommend Plan B (Safe Targeted Patch). This updates only the vulnerable package to a secure, compatible "
+            "We recommend Path B (Safe Targeted Patch). This updates only the vulnerable package to a secure, compatible "
             "version while leaving the rest of your project completely intact and stable."
         )
     else:
@@ -573,16 +613,16 @@ def analyze_manifest(
         )
         why_it_fails = (
             f"No critical vulnerabilities were detected. However, {unpinned_count} dependencies use flexible "
-            "version ranges (^ or ~), which can lead to unpredictable builds if upstream packages release unexpected changes."
+            "version ranges (^, ~, >=), which can lead to unpredictable builds if upstream packages release unexpected changes."
         )
         how_to_fix_it = (
-            "Ensure a valid package-lock.json is committed so every team member and server runs identical package versions."
+            "Ensure a locked manifest is committed so every team member and deployment runs identical package versions."
         )
 
     layman_analogy = (
         "Think of your software project like a 4-story building: UI on top, Services on the 3rd floor, "
         "Database in the basement, and external supplier parts supporting the foundation. One supplier part "
-        f"({vuln_names[0] if vuln_names else 'an external package'}) has a known crack—Plan B replaces just "
+        f"({vuln_names[0] if vuln_names else 'an external package'}) has a known crack—Path B replaces just "
         "that cracked bolt without needing to rebuild the entire building."
     )
 
@@ -594,11 +634,28 @@ def analyze_manifest(
     }
 
     # Before vs After Manifest Diff
-    patched_manifest = dict(manifest)
-    if "dependencies" in patched_manifest and "lodash" in patched_manifest["dependencies"]:
-        patched_deps = dict(patched_manifest["dependencies"])
-        patched_deps["lodash"] = CURRENT_LODASH_RELEASE
-        patched_manifest["dependencies"] = patched_deps
+    if ecosystem == "PyPI":
+        diff_file = "requirements.txt"
+        before_text = raw
+        after_lines = []
+        for line in raw.splitlines():
+            pkg_m = re.match(r"^([A-Za-z0-9_.\-]+)", line.strip())
+            if pkg_m and pkg_m.group(1).lower() in vuln_pkg_list:
+                pkg_name = pkg_m.group(1).lower()
+                fixed_v = _max_fixed(pkg_name)
+                after_lines.append(f"{pkg_name}>={fixed_v}  # SAFE TARGET PATCH: Resolves {len([f for f in findings if f['package'] == pkg_name])} vulnerabilities")
+            else:
+                after_lines.append(line)
+        after_text = "\n".join(after_lines)
+    else:
+        diff_file = "package.json"
+        patched_manifest = dict(manifest)
+        if "dependencies" in patched_manifest and "lodash" in patched_manifest["dependencies"]:
+            patched_deps = dict(patched_manifest["dependencies"])
+            patched_deps["lodash"] = CURRENT_LODASH_RELEASE
+            patched_manifest["dependencies"] = patched_deps
+        before_text = json.dumps(manifest, indent=2)
+        after_text = json.dumps(patched_manifest, indent=2)
 
     return {
         "title": manifest.get("name") or title,
@@ -616,9 +673,9 @@ def analyze_manifest(
             "unpinned_count": unpinned_count,
         },
         "diff": {
-            "file": "package.json",
-            "before": json.dumps(manifest, indent=2),
-            "after": json.dumps(patched_manifest, indent=2),
+            "file": diff_file,
+            "before": before_text,
+            "after": after_text,
         },
         "system_graph": {
             "nodes": nodes,

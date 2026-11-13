@@ -54,6 +54,7 @@ export interface CandidatePlan {
   name: string;
   label: string;
   recommended?: boolean;
+  exact_definition?: string;
   summary: string;
   reason: string;
   evidence: string[];

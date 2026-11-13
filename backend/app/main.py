@@ -372,7 +372,7 @@ def create_analysis(payload: AnalyzeRequest, request: Request, db: Session = Dep
             try:
                 result = analyze_manifest(raw, payload.title, source_url)
             except ValueError as exc:
-                raise HTTPException(status_code=422, detail="Enter package.json JSON or a public GitHub repository URL.") from exc
+                raise HTTPException(status_code=422, detail="Enter package.json or requirements.txt manifest, or a public GitHub repository URL.") from exc
         blueprint = None
         mode = "cs_repo"
     elif payload.analysis_type == "circuit":
@@ -409,15 +409,18 @@ def create_analysis(payload: AnalyzeRequest, request: Request, db: Session = Dep
         if raw.casefold().startswith("https://github.com/"):
             try:
                 raw, source_url = fetch_github_package_json(raw)
+                result = analyze_manifest(raw, payload.title, source_url)
+                blueprint = None
+                mode = "cs_repo"
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
-        if raw.lstrip().startswith("{"):
+        elif raw.lstrip().startswith("{"):
             try:
                 result = analyze_manifest(raw, payload.title, source_url)
+                blueprint = None
+                mode = "cs_repo"
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
-            blueprint = None
-            mode = "cs_repo"
         else:
             result = analyze_idea(payload.title, raw, payload.department_lens, gemini_api_key=x_gemini_key)
             blueprint = result
@@ -452,6 +455,11 @@ def preview_calculation(payload: AnalyzeRequest, request: Request) -> RunRespons
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
         else:
+            if raw.casefold().startswith("https://github.com/"):
+                try:
+                    raw, source_url = fetch_github_package_json(raw)
+                except ValueError as exc:
+                    raise HTTPException(status_code=422, detail=str(exc)) from exc
             try:
                 result = analyze_manifest(raw, payload.title, source_url)
             except ValueError as exc:
