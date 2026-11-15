@@ -71,6 +71,18 @@ export default function Canvas({
   // Handle Global Keydowns (Escape, Delete, Rotate)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Do not intercept hotkeys if the user is typing into an input, textarea, or select
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (e.key === "Escape") {
         setPendingWire(null);
         setSelectedCompId(null);

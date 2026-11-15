@@ -38,28 +38,32 @@ function getResistorBands(rOhms: number): { band1: string; band2: string; mult: 
   return { band1: b1, band2: b2, mult, tol };
 }
 
-export const ComponentPropertyInspector: React.FC<ComponentPropertyInspectorProps> = ({
-  component,
-  onUpdateProperties,
-  onRotate,
-  onDelete,
-  onDuplicate,
-  onClose,
-}) => {
-  if (!component) return null;
+export const ComponentPropertyInspector: React.FC<ComponentPropertyInspectorProps> = React.memo(
+  ({
+    component,
+    onUpdateProperties,
+    onRotate,
+    onDelete,
+    onDuplicate,
+    onClose,
+  }) => {
+    if (!component) return null;
 
-  const handleChange = (key: string, value: number | string | boolean) => {
-    onUpdateProperties(component.id, {
-      ...component.properties,
-      [key]: value,
-    });
-  };
+    const handleChange = (key: string, value: number | string | boolean) => {
+      onUpdateProperties(component.id, {
+        ...component.properties,
+        [key]: value,
+      });
+    };
 
-  const rOhms = Number(component.properties.resistance ?? 1000);
-  const resistorBands = getResistorBands(rOhms);
+    const rOhms = Number(component.properties.resistance ?? 1000);
+    const resistorBands = getResistorBands(rOhms);
 
-  return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl text-slate-200 text-xs flex flex-col gap-3">
+    return (
+      <div
+        className="bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl text-slate-200 text-xs flex flex-col gap-3"
+        onKeyDown={(e) => e.stopPropagation()}
+      >
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
@@ -414,4 +418,25 @@ export const ComponentPropertyInspector: React.FC<ComponentPropertyInspectorProp
       </div>
     </div>
   );
-};
+}, (prev, next) => {
+  if (prev.component === next.component) return true;
+  if (!prev.component || !next.component) return false;
+  if (prev.component.id !== next.component.id) return false;
+  if (prev.component.rotation !== next.component.rotation) return false;
+  if (prev.component.name !== next.component.name) return false;
+
+  // Check if properties changed
+  const prevKeys = Object.keys(prev.component.properties);
+  const nextKeys = Object.keys(next.component.properties);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const k of prevKeys) {
+    if (prev.component.properties[k] !== next.component.properties[k]) return false;
+  }
+
+  // Throttle telemetry re-renders unless voltage swings >0.1V
+  const prevV = prev.component.state?.voltage ?? 0;
+  const nextV = next.component.state?.voltage ?? 0;
+  if (Math.abs(prevV - nextV) > 0.1) return false;
+
+  return true;
+});
