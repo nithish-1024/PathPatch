@@ -396,6 +396,12 @@ export default function Canvas({
               transform={`translate(${pos.x}, ${pos.y}) rotate(${comp.rotation})`}
               className={`canvas-comp-group ${isSelected ? "selected" : ""}`}
               onMouseDown={(e) => handleCompMouseDown(e, comp)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCompId(comp.id);
+                setSelectedWireId(null);
+                onSelectComponent(comp);
+              }}
               cursor="move"
             >
               {/* Visual Body Rendering Based on Component Type */}
