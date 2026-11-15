@@ -17,6 +17,12 @@ from pydantic import BaseModel, Field
 
 from app.auth.security import ALGORITHM, get_secret_key
 from app.db.database import get_db
+from app.ast_guardrail import (
+    GuardrailViolation,
+    inspect_code_ast,
+    inspect_text_for_injections,
+    redact_solution_leakage,
+)
 from app.engines.civil_truss_engine import analyze_truss
 from app.engines.ece_circuit_engine import COMPONENT_CATALOG, analyze_circuit
 from app.engines.mechanical_beam_engine import analyze_beam
@@ -501,6 +507,65 @@ async def handle_mcp_post(
                 },
             )
 
+    # -------------------------------------------------------------------------
+    # DETERMINISTIC AST & PROMPT INJECTION GUARDRAIL INTERCEPTION
+    # -------------------------------------------------------------------------
+    if method in {"tools/call", "prompts/get"}:
+        def _extract_all_strings(val: Any) -> list[str]:
+            res = []
+            if isinstance(val, str):
+                res.append(val)
+            elif isinstance(val, dict):
+                for v in val.values():
+                    res.extend(_extract_all_strings(v))
+            elif isinstance(val, list):
+                for v in val:
+                    res.extend(_extract_all_strings(v))
+            return res
+
+        all_text = " ".join(_extract_all_strings(params))
+        violation = inspect_text_for_injections(all_text)
+        if violation:
+            rule_id, desc = violation
+            telemetry_entry["action"] = "BLOCKED_PROMPT_INJECTION"
+            telemetry_entry["violation_attempt"] = True
+            telemetry_entry["violation_rule"] = rule_id
+            TELEMETRY_LOGS.append(telemetry_entry)
+            logger.warning(
+                f"[GUARDRAIL VIOLATION] Blocked injection from {ctx.roll_no}: {rule_id} - {desc}"
+            )
+            return JsonRpcResponse(
+                id=req_id,
+                error={
+                    "code": -32003,
+                    "message": f"Socratic Guardrail Violation: {desc}",
+                    "data": {
+                        "rule": rule_id,
+                        "reason": desc,
+                        "student_roll_no": ctx.roll_no,
+                        "policy": "PathPatch Socratic Neuro-Symbolic Academic Contract",
+                        "zero_leakage_guarantee": True,
+                    },
+                },
+            )
+
+        try:
+            for s in _extract_all_strings(params):
+                inspect_code_ast(s)
+        except GuardrailViolation as gv:
+            telemetry_entry["action"] = "BLOCKED_AST_VIOLATION"
+            telemetry_entry["violation_attempt"] = True
+            telemetry_entry["violation_rule"] = gv.rule
+            TELEMETRY_LOGS.append(telemetry_entry)
+            return JsonRpcResponse(
+                id=req_id,
+                error={
+                    "code": -32003,
+                    "message": f"AST Security Violation: {gv.reason}",
+                    "data": {"rule": gv.rule, "category": gv.category},
+                },
+            )
+
     TELEMETRY_LOGS.append(telemetry_entry)
 
     # -------------------------------------------------------------------------
@@ -687,3 +752,69 @@ def get_telemetry_audit(
         "exam_lock_violations": [log for log in TELEMETRY_LOGS if log.get("action") == "MUTED_EXAM_LOCK"],
         "telemetry_stream": TELEMETRY_LOGS[-50:],
     }
+
+
+@mcp_router.get("/config")
+def get_mcp_client_config(
+    request: Request,
+    ctx: StudentSessionContext = Depends(resolve_student_context),
+) -> dict[str, Any]:
+    """1-Click Configuration Exporter for Claude Desktop, Claude Code, and Cursor.
+    Generates ready-to-paste configurations embedding the student's personal authenticated session.
+    """
+    base_url = str(request.base_url).rstrip("/")
+    mcp_url = f"{base_url}/api/v1/mcp"
+
+    token = request.cookies.get("patchpath_session", "")
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+
+    # Claude Desktop Stdio Bridge config
+    claude_desktop_cfg = {
+        "mcpServers": {
+            "pathpatch": {
+                "command": "python",
+                "args": [
+                    "-m",
+                    "app.mcp_bridge",
+                    mcp_url,
+                    token,
+                ],
+                "env": {
+                    "PATHPATCH_MCP_URL": mcp_url,
+                    "PATHPATCH_AUTH_TOKEN": token,
+                },
+            }
+        }
+    }
+
+    # Cursor Native MCP config
+    cursor_cfg = {
+        "mcpServers": {
+            "pathpatch": {
+                "url": mcp_url,
+                "headers": {
+                    "Authorization": f"Bearer {token}",
+                    "X-Tenant-ID": ctx.tenant_id,
+                },
+            }
+        }
+    }
+
+    # Claude Code CLI command
+    claude_code_cmd = f"claude mcp add pathpatch python -m app.mcp_bridge {mcp_url} {token}"
+
+    return {
+        "student_roll_no": ctx.roll_no,
+        "tenant_id": ctx.tenant_id,
+        "mcp_url": mcp_url,
+        "claude_desktop_config": claude_desktop_cfg,
+        "cursor_config": cursor_cfg,
+        "claude_code_command": claude_code_cmd,
+        "instructions": (
+            "Paste claude_desktop_config into %APPDATA%/Claude/claude_desktop_config.json (Windows) "
+            "or ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)."
+        ),
+    }
+
