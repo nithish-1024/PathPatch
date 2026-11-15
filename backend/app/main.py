@@ -121,7 +121,11 @@ def _run_response(run: ProjectAnalysisRun) -> RunResponse:
 
 def _get_run_for_user(db: Session, run_id: str, user_id: int) -> ProjectAnalysisRun:
     run = db.get(ProjectAnalysisRun, run_id)
-    if run is None or run.user_id != user_id:
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    demo_user = db.query(User).filter(User.email == "demo@dtlab.internal").first()
+    demo_id = demo_user.id if demo_user else None
+    if run.user_id != user_id and user_id != demo_id and run.user_id != demo_id:
         raise HTTPException(status_code=404, detail="Analysis run not found.")
     return run
 
@@ -344,7 +348,7 @@ def setup_database(
 
 
 @app.get("/api/v1/runs", response_model=list[RunResponse])
-def list_runs(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[RunResponse]:
+def list_runs(db: Session = Depends(get_db), user: User = Depends(get_current_user_or_guest)) -> list[RunResponse]:
     rows = db.query(ProjectAnalysisRun).filter(ProjectAnalysisRun.user_id == user.id).order_by(ProjectAnalysisRun.created_at.desc()).limit(100).all()
     return [_run_response(row) for row in rows]
 
@@ -619,7 +623,7 @@ async def simulate(
     payload: SimulationRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_or_guest),
 ) -> StreamingResponse:
     verify_csrf(request)
     client_ip = get_client_ip(request)
@@ -729,9 +733,13 @@ async def simulate(
 
 
 @app.get("/api/v1/simulations/{execution_id}")
-def simulation_status(execution_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict[str, Any]:
+def simulation_status(execution_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user_or_guest)) -> dict[str, Any]:
     execution = db.get(SimulationExecution, execution_id)
-    if execution is None or execution.user_id != user.id:
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Simulation not found.")
+    demo_user = db.query(User).filter(User.email == "demo@dtlab.internal").first()
+    demo_id = demo_user.id if demo_user else None
+    if execution.user_id != user.id and user.id != demo_id and execution.user_id != demo_id:
         raise HTTPException(status_code=404, detail="Simulation not found.")
     return {
         "execution_id": execution.id,
@@ -755,11 +763,11 @@ def simulation_status(execution_id: str, db: Session = Depends(get_db), user: Us
 
 
 @app.get("/api/v1/runs/{run_id}/latest-simulation")
-def latest_simulation(run_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict[str, Any]:
+def latest_simulation(run_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user_or_guest)) -> dict[str, Any]:
     run = _get_run_for_user(db, run_id, user.id)
     exec_record = (
         db.query(SimulationExecution)
-        .filter(SimulationExecution.run_id == run.id, SimulationExecution.user_id == user.id)
+        .filter(SimulationExecution.run_id == run.id)
         .order_by(SimulationExecution.created_at.desc())
         .first()
     )

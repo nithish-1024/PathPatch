@@ -160,10 +160,10 @@ export default function App() {
       );
     }
     if (pathname === "/repo") return <RepoStudioPage />;
-    if (pathname === "/ece") return <EceStudioPage />;
-    if (pathname === "/civil") return <CivilStudioPage />;
-    if (pathname === "/mechanical") return <MechanicalStudioPage />;
-    if (pathname === "/idea") return <IdeaStudioPage />;
+    if (pathname === "/ece" || pathname === "/circuits") return <EceStudioPage />;
+    if (pathname === "/civil" || pathname === "/truss") return <CivilStudioPage />;
+    if (pathname === "/mechanical" || pathname === "/mech" || pathname === "/beam") return <MechanicalStudioPage />;
+    if (pathname === "/idea" || pathname === "/architecture") return <IdeaStudioPage />;
     return <LandingPage navigate={navigate} />;
   };
 

@@ -1,5 +1,7 @@
 import { Activity, Cpu, HardHat, Home, Key, Layers, Moon, Sun, User as UserIcon } from "lucide-react";
+import { useState } from "react";
 import type { User } from "../../types/patchpath";
+import { CampusControlModal } from "../modals/CampusControlModal";
 
 interface NavbarProps {
   currentPath: string;
@@ -22,6 +24,7 @@ export default function Navbar({
   onOpenAuthModal,
   hasGeminiKey,
 }: NavbarProps) {
+  const [isCampusModalOpen, setIsCampusModalOpen] = useState(false);
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/repo", label: "1. Repo", icon: Layers, tag: "AST & OSV" },
@@ -69,6 +72,17 @@ export default function Navbar({
 
         {/* Right Utilities */}
         <div className="site-nav-actions">
+          {/* Institutional SaaS & NBA Control Button */}
+          <button
+            type="button"
+            className="campus-saas-btn"
+            onClick={() => setIsCampusModalOpen(true)}
+            title="Open Campus Institutional SaaS & NBA Lab Control"
+          >
+            <span className="live-dot" />
+            <span>🏛️ Campus SaaS & NBA (142 Online)</span>
+          </button>
+
           {/* AI Key Status Button */}
           <button
             type="button"
@@ -104,6 +118,12 @@ export default function Navbar({
           </button>
         </div>
       </div>
+
+      {/* Institutional B2B Campus Control Modal */}
+      <CampusControlModal
+        isOpen={isCampusModalOpen}
+        onClose={() => setIsCampusModalOpen(false)}
+      />
     </header>
   );
 }

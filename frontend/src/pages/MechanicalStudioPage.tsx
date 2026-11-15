@@ -165,6 +165,9 @@ export default function MechanicalStudioPage() {
         <div className="studio-left-column">
           <div className="viewport-box">
             <div className="viewport-overlay-badges">
+              <span className={`status-pill ${physics.isDeflectionHigh ? "danger" : "safe"}`} style={{ fontWeight: 800 }}>
+                {physics.isDeflectionHigh ? "❌ SERVICEABILITY FAIL: v_max > L/360" : "✅ SERVICEABILITY PASS: v_max ≤ L/360"}
+              </span>
               <span className={`status-pill ${physics.isDeflectionHigh ? "danger" : "safe"}`}>
                 <Activity size={13} />
                 <span>
@@ -287,6 +290,34 @@ export default function MechanicalStudioPage() {
                   <span>200 mm (Deep)</span>
                 </div>
               </div>
+            </div>
+
+            {/* 1-Click Scenario Presets */}
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                style={{ padding: "5px 10px", fontSize: "11px", borderRadius: "6px", background: !physics.isDeflectionHigh ? "#0284c7" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0", cursor: "pointer", fontWeight: 600 }}
+                onClick={() => {
+                  setPointLoadKn(3.0);
+                  setSpanM(2.0);
+                  setWidthMm(50);
+                  setDepthMm(120);
+                }}
+              >
+                🟢 Safe Serviceability (Steel · 3 kN · 120mm)
+              </button>
+              <button
+                type="button"
+                style={{ padding: "5px 10px", fontSize: "11px", borderRadius: "6px", background: physics.isDeflectionHigh ? "#dc2626" : "rgba(239,68,68,0.15)", border: "1px solid #ef4444", color: "#fca5a5", cursor: "pointer", fontWeight: 700 }}
+                onClick={() => {
+                  setPointLoadKn(12.0);
+                  setSpanM(3.5);
+                  setWidthMm(30);
+                  setDepthMm(50);
+                }}
+              >
+                ⚡ Trigger L/360 Sag Overload (12 kN · 50mm)
+              </button>
             </div>
           </div>
         </div>

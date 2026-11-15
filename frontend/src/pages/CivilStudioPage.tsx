@@ -192,6 +192,31 @@ export default function CivilStudioPage() {
                 <span>180 kN (Standard Design)</span>
                 <span>300 kN (Extreme Overload)</span>
               </div>
+
+              {/* 1-Click Quick Scenario Presets */}
+              <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", background: totalLoadKn === 80 ? "#0284c7" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0", cursor: "pointer", fontWeight: 600 }}
+                  onClick={() => setTotalLoadKn(80)}
+                >
+                  🟢 Safe Traffic (80 kN)
+                </button>
+                <button
+                  type="button"
+                  style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", background: totalLoadKn === 180 ? "#0284c7" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0", cursor: "pointer", fontWeight: 600 }}
+                  onClick={() => setTotalLoadKn(180)}
+                >
+                  🟡 Design Limit (180 kN)
+                </button>
+                <button
+                  type="button"
+                  style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", background: totalLoadKn >= 260 ? "#dc2626" : "rgba(239,68,68,0.15)", border: "1px solid #ef4444", color: "#fca5a5", cursor: "pointer", fontWeight: 700 }}
+                  onClick={() => setTotalLoadKn(260)}
+                >
+                  ⚡ Trigger Critical Euler Buckling (260 kN)
+                </button>
+              </div>
             </div>
           </div>
         </div>

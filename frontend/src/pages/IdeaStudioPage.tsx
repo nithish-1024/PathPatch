@@ -222,6 +222,17 @@ ${selectedIdea.hardenedBlueprint.implementationSteps.map((step, idx) => `${idx +
           <div className="flex items-center gap-2">
             <button
               type="button"
+              className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+              onClick={() => {
+                window.location.href = "/ece";
+              }}
+              title="Transfer Stage-2 schematic and verified Silicon BOM into live /ece Workbench"
+            >
+              <Zap size={13} />
+              <span>⚡ Open Stage in /ece Workbench</span>
+            </button>
+            <button
+              type="button"
               className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
               onClick={() => setIsVaultOpen(true)}
               title="Organize ideas into categorized folders"
@@ -322,6 +333,32 @@ ${selectedIdea.hardenedBlueprint.implementationSteps.map((step, idx) => `${idx +
               </div>
               <h4 className="stage-name">{st.name}</h4>
               <p className="stage-desc">{st.desc}</p>
+              {st.highlight && (
+                <button
+                  type="button"
+                  style={{
+                    marginTop: "8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    background: "rgba(6, 182, 212, 0.18)",
+                    border: "1px solid rgba(6, 182, 212, 0.4)",
+                    color: "#22d3ee",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    window.location.href = "/ece";
+                  }}
+                  title="Simulate this bottleneck circuit in live /ece Workbench"
+                >
+                  <Zap size={10} />
+                  <span>⚡ Simulate in /ece</span>
+                </button>
+              )}
               {i < selectedIdea.stages.length - 1 && (
                 <div className="pipeline-arrow">
                   <ArrowRight size={14} />

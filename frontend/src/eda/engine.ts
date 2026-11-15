@@ -821,9 +821,36 @@ export class EdaSimulationEngine {
         const invNet = pinToNet.get(`${c.id}:inv`);
         const noninvNet = pinToNet.get(`${c.id}:noninv`);
         const outNet = pinToNet.get(`${c.id}:out`);
+        const vposNet = pinToNet.get(`${c.id}:vpos`);
         const vOut = outNet ? (nodeVoltages[outNet] ?? 0) : 0;
 
-        if (!invNet || !noninvNet) {
+        const hasVposWire = wires.some(
+          (w) =>
+            `${w.fromCompId}:${w.fromPinId}` === `${c.id}:vpos` ||
+            `${w.toCompId}:${w.toPinId}` === `${c.id}:vpos`
+        );
+
+        if (!vposNet || !hasVposWire) {
+          diagnostics.push({
+            id: `diag_opamp_floating_vpos_${c.id}`,
+            severity: "critical",
+            title: `⚡ FLOATING VCC+ RAIL: LM741 Op-Amp (${c.designator || c.name})`,
+            componentId: c.id,
+            faultLocation: {
+              componentId: c.id,
+              componentDesignator: c.designator || c.name,
+              pinId: "vpos",
+              pinName: "Pin 7 (VCC+ Supply Rail)",
+              nodePotentialV: 0.0,
+            },
+            whereItWentWrong: `LM741 ${c.designator || c.name} Pin 7 (VCC+) is Unconnected / Floating`,
+            whyItWentWrong: `Positive power supply rail pin has infinite DC source impedance. Without positive rail bias current, the internal differential pair is starved of current and the output flat-clips at 0V.`,
+            whyThisHappened: `IC1 Pin 7 (VCC+) lacks a physical wire connection to the +15V DC rail. The op-amp output collapses into flat clipping at 0V.`,
+            firstPrinciplesProof: "I_{supply} = 0\\text{ mA} \\implies V_{out,max} = \\min(A_{ol} \\cdot V_{id}, V_{cc} - V_{sat}) = 0.00\\text{V} \\text{ (Output Flat-Clipped)}",
+            recommendation: "Connect Pin 7 (VCC+) to the +15V positive DC supply rail to restore normal operational bias.",
+          });
+          activeAlerts.push(`CRITICAL FAULT: LM741 ${c.designator || c.name} Pin 7 (VCC+) is floating! Output collapsed.`);
+        } else if (!invNet || !noninvNet) {
           diagnostics.push({
             id: `diag_opamp_float_${c.id}`,
             severity: "warning",

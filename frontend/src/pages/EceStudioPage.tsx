@@ -403,6 +403,30 @@ export default function EceStudioPage() {
                         💡 Actionable Recommendation:
                       </span>
                       <p className="text-emerald-200 text-[11px] leading-relaxed">{diag.recommendation}</p>
+                      {diag.id.includes("floating_vpos") && (
+                        <button
+                          type="button"
+                          className="mt-2 w-full py-1.5 px-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition"
+                          onClick={() => {
+                            setWires((prev) => [
+                              ...prev,
+                              {
+                                id: `w_autofix_${Date.now()}`,
+                                fromCompId: "VCC_SUPPLY",
+                                toCompId: "U_OPAMP",
+                                fromPinId: "out",
+                                toPinId: "vpos",
+                                color: "red",
+                                voltage: 15.0,
+                                current: 0.002,
+                              },
+                            ]);
+                          }}
+                        >
+                          <Zap size={14} />
+                          <span>⚡ 1-Click Auto-Fix Pin 7 Wire (+15V Rail)</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
