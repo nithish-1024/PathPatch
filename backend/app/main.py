@@ -84,6 +84,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.mcp_server import mcp_router
+
+app.include_router(mcp_router, prefix="/api/v1")
+
 
 def _user_response(user: User) -> UserResponse:
     return UserResponse(id=user.id, email=user.email, full_name=user.full_name, department=user.department)
