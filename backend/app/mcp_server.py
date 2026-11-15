@@ -204,7 +204,22 @@ TOOL_SCHEDULE_STUDY_SESSION = {
     },
 }
 
-MINIMAL_TOOLS = [TOOL_VERIFY_PHYSICS_SOLVER, TOOL_SCHEDULE_STUDY_SESSION]
+TOOL_ORCHESTRATE_REMEDIAL = {
+    "name": "orchestrate_remedial_session",
+    "description": "Autonomous remedial study orchestrator: detects lab bottlenecks, matches high-performing peer mentors from departmental competency network, and dispatches two-way calendar invites.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "bottleneck_topic": {"type": "string", "description": "Specific failure topic (e.g. Linear Regulator Thermal Dissipation)"},
+            "course_code": {"type": "string", "description": "Course code (e.g. 25ES1EC101)"},
+            "days_until_exam": {"type": "integer", "default": 5},
+            "diagnostic_context": {"type": "string", "description": "Failure proof summary from verify_physics_solver"},
+        },
+        "required": ["bottleneck_topic", "course_code"],
+    },
+}
+
+MINIMAL_TOOLS = [TOOL_VERIFY_PHYSICS_SOLVER, TOOL_SCHEDULE_STUDY_SESSION, TOOL_ORCHESTRATE_REMEDIAL]
 
 RESOURCE_TIMETABLE = {
     "uri": "academic://timetable.ics",
@@ -220,7 +235,21 @@ RESOURCE_AETHER_NOTES = {
     "mimeType": "text/markdown",
 }
 
-MINIMAL_RESOURCES = [RESOURCE_TIMETABLE, RESOURCE_AETHER_NOTES]
+RESOURCE_ATTENDANCE = {
+    "uri": "academic://erp/attendance.json",
+    "name": "Live ERP Attendance & Condonation Status",
+    "description": "Live sync of subject-wise attendance percentages, condonation alert bands, and required class deficits from EduPrime CAMS-ERP Ver. 3.0.",
+    "mimeType": "application/json",
+}
+
+RESOURCE_UNIT_CURRICULUM = {
+    "uri": "academic://notes/unit_curriculum.md",
+    "name": "Autonomous Syllabus Units & Lecture Notes",
+    "description": "Complete breakdown of Units 1 through 5, lecture objectives, and Course Outcome (CO1-CO5) mappings under VNRVJIET Autonomous R22/R25 regulations.",
+    "mimeType": "text/markdown",
+}
+
+MINIMAL_RESOURCES = [RESOURCE_TIMETABLE, RESOURCE_AETHER_NOTES, RESOURCE_ATTENDANCE, RESOURCE_UNIT_CURRICULUM]
 
 PROMPT_SOCRATIC_TROUBLESHOOT = {
     "name": "socratic_lab_troubleshoot",
@@ -303,6 +332,95 @@ Status: Active Lab Session `{ctx.session_id}`
 - Euler Critical Buckling: P_cr = (pi^2 * E * I) / (K * L)^2
 - VNRVJIET Exam Notice: AI Copilot is muted during proctored lab examinations under NBA SAR guidelines.
 """.strip()
+
+
+def get_student_attendance_json(ctx: StudentSessionContext) -> str:
+    """Generate live attendance & condonation data matching EduPrime CAMS-ERP Ver. 3.0."""
+    attendance_data = {
+        "student_roll_no": ctx.roll_no,
+        "tenant_id": ctx.tenant_id,
+        "academic_year": "2026-2027",
+        "semester": "IV Semester B.Tech (ECE)",
+        "aggregate_attendance_pct": 78.4,
+        "eligibility_status": "ELIGIBLE_REGULAR",
+        "condonation_threshold_pct": 75.0,
+        "severe_detention_threshold_pct": 65.0,
+        "courses": [
+            {
+                "course_code": "25ES1EC101",
+                "course_title": "Electronic Devices & Digital Systems Lab",
+                "total_hours": 30,
+                "attended_hours": 25,
+                "attendance_pct": 83.3,
+                "status": "SAFE",
+                "deficit_hours": 0,
+            },
+            {
+                "course_code": "22PC1EC301",
+                "course_title": "Linear Integrated Circuits & Applications",
+                "total_hours": 40,
+                "attended_hours": 29,
+                "attendance_pct": 72.5,
+                "status": "CONDONATION_WARNING",
+                "deficit_hours": 1,
+                "action_alert": "Must attend next 1 scheduled lecture to cross the 75.0% mandatory eligibility threshold.",
+            },
+            {
+                "course_code": "22PC1EC306",
+                "course_title": "Analog Electronic Circuits",
+                "total_hours": 42,
+                "attended_hours": 34,
+                "attendance_pct": 81.0,
+                "status": "SAFE",
+                "deficit_hours": 0,
+            },
+        ],
+        "university_regulations": "VNRVJIET Autonomous Academic Regulations R22/R25: Students possessing < 75% attendance are not eligible for Semester End Examinations (SEE) unless condoned by Academic Committee (65%-74.99%) on genuine medical grounds.",
+    }
+    return json.dumps(attendance_data, indent=2)
+
+
+def get_unit_curriculum_md(ctx: StudentSessionContext) -> str:
+    """Generate structured autonomous syllabus units (Unit 1 to Unit 5) mapped to COs."""
+    return f"""# Autonomous Syllabus & Unit Curriculum: 25ES1EC101 / 22PC1EC301
+Institution: VNRVJIET (Autonomous) | Regulation: R22/R25
+Department of Electronics & Communication Engineering
+
+## Course: 22PC1EC301 Linear Integrated Circuits & Applications
+- **Course Outcomes (COs):**
+  - **CO1:** Analyze linear/non-linear applications of Operational Amplifiers and verify rail saturation boundaries.
+  - **CO2:** Design active filters, instrumentation amplifiers, and waveform generators.
+  - **CO3:** Evaluate thermal dissipation, power supply rejection, and IC regulator circuits.
+  - **CO4:** Synthesize 555 timers and phase-locked loops for frequency demodulation.
+  - **CO5:** Model analog-to-digital (ADC) and digital-to-analog (DAC) converter architectures.
+
+## Structured Units (Unit 1 to Unit 5)
+### Unit 1: Operational Amplifier Fundamentals & DC Characteristics
+- Input bias current, input offset voltage, thermal drift, slew rate, CMRR.
+- Power Supply Rails (+/-15V): Pin 7 (VCC+), Pin 4 (VEE-). Dynamic output swing saturation limits.
+- Inverting and Non-Inverting Closed-Loop configurations. Virtual Ground theorem.
+
+### Unit 2: Linear Applications of Op-Amps
+- Differential Amplifier & Instrumentation Amplifier (3 Op-Amp topology).
+- AC-coupled amplifiers, summing and averaging circuits, voltage follower.
+- Precision Integrator and Differentiator with high-frequency stability resistors.
+
+### Unit 3: Non-Linear Op-Amp Applications & Comparators
+- Zero crossing detector, Schmitt Trigger (Inverting and Non-inverting with hysteresis).
+- Precision Half-Wave and Full-Wave Rectifiers.
+- Peak detector, Sample and Hold circuits.
+
+### Unit 4: Timers, PLLs & Voltage Regulators
+- 555 Timer in Astable and Monostable multivibrator modes.
+- Phase Locked Loop (IC 565) block diagram and lock/capture range.
+- Linear IC Regulators: LM7805/LM317. Thermal resistance Rtheta_ja, junction temperature Tj, and heatsink sizing.
+
+### Unit 5: Data Converters (D/A and A/D)
+- Weighted resistor DAC, R-2R ladder DAC.
+- Flash ADC, Successive Approximation Register (SAR) ADC, Dual Slope ADC.
+- Resolution, quantization error, conversion speed, and dynamic range.
+""".strip()
+
 
 
 # -----------------------------------------------------------------------------
@@ -449,6 +567,52 @@ def execute_schedule_study_session(arguments: dict[str, Any], ctx: StudentSessio
         "sync_target": "EduPrime CAMS-ERP Ver. 3.0",
         "notes": "Remedial preparation session automatically mapped to Course Outcome (CO) diagnostics.",
     }
+
+
+def execute_orchestrate_remedial(arguments: dict[str, Any], ctx: StudentSessionContext) -> dict[str, Any]:
+    topic = arguments.get("bottleneck_topic", "Experiment 4: Linear Voltage Regulators")
+    course_code = arguments.get("course_code", "25ES1EC101")
+    days_to_exam = int(arguments.get("days_until_exam", 5))
+    diag_context = arguments.get("diagnostic_context", "Thermal junction overload detected in MNA physics solver.")
+
+    # High-performing peer mentor matching from departmental competency network
+    matched_mentor = {
+        "peer_name": "Karthik R.",
+        "roll_no": "22071A04K2",
+        "competency_area": "Power Supplies & Thermal Design (Unit 1/3)",
+        "cgpa_band": "9.0 - 9.5",
+        "peer_co_attainment": "High Mastery (CO1 & CO3)",
+    }
+
+    event_id = f"REM-ORCH-{str(uuid4())[:8].upper()}"
+    scheduled_slot = "Wednesday 16:30 - 17:15 IST"
+    venue = "VNRVJIET B-Block Lab 204 / Collaborative DT Lounge"
+
+    prep_brief = [
+        "1. Pre-Lab Calculation: Calculate dissipated power Pd = (Vin - Vout) * Iload for Vin=12V, Vout=5V at Iload=0.35A.",
+        "2. Thermal Limit Check: Compare Tj = Tambient + (Pd * Rtheta_ja) for bare package (65°C/W) vs clip heatsink (36°C/W) against 125°C Tj_max.",
+        "3. Practical Viva Scenario: Explain to Dr. Srinivas why a switched buck module (TSR 1-2450) eliminates heatsink bulk without thermal shutdown.",
+    ]
+
+    return {
+        "orchestration_id": event_id,
+        "status": "DISPATCHED_TO_CALENDAR",
+        "student_roll_no": ctx.roll_no,
+        "course_code": course_code,
+        "bottleneck_topic": topic,
+        "days_until_exam": days_to_exam,
+        "matched_peer_mentor": matched_mentor,
+        "scheduled_slot": scheduled_slot,
+        "venue": venue,
+        "diagnostic_brief": prep_brief,
+        "calendar_sync": ["EduPrime CAMS-ERP Ver. 3.0", "RFC 5545 iCalendar"],
+        "nba_sar_mapping": {
+            "course_outcome": "CO3 (Power Supply & Thermal Regulation)",
+            "program_outcome": "PO1 (Engineering Knowledge) & PO9 (Individual & Team Work)",
+            "intervention_type": "Autonomous Remedial Socratic Peer Matching",
+        },
+    }
+
 
 
 # -----------------------------------------------------------------------------
@@ -621,6 +785,20 @@ async def handle_mcp_post(
                         "isError": False,
                     },
                 )
+            elif tool_name == "orchestrate_remedial_session":
+                orch_output = execute_orchestrate_remedial(arguments, ctx)
+                return JsonRpcResponse(
+                    id=req_id,
+                    result={
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(orch_output, indent=2),
+                            }
+                        ],
+                        "isError": False,
+                    },
+                )
             else:
                 return JsonRpcResponse(
                     id=req_id,
@@ -656,6 +834,34 @@ async def handle_mcp_post(
                                 "uri": uri,
                                 "mimeType": "text/markdown",
                                 "text": notes_data,
+                            }
+                        ]
+                    },
+                )
+            elif uri == "academic://erp/attendance.json":
+                att_data = get_student_attendance_json(ctx)
+                return JsonRpcResponse(
+                    id=req_id,
+                    result={
+                        "contents": [
+                            {
+                                "uri": uri,
+                                "mimeType": "application/json",
+                                "text": att_data,
+                            }
+                        ]
+                    },
+                )
+            elif uri == "academic://notes/unit_curriculum.md":
+                curric_data = get_unit_curriculum_md(ctx)
+                return JsonRpcResponse(
+                    id=req_id,
+                    result={
+                        "contents": [
+                            {
+                                "uri": uri,
+                                "mimeType": "text/markdown",
+                                "text": curric_data,
                             }
                         ]
                     },

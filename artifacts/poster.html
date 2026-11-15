@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PathPatch - Official Project Poster</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+    @page {
+      size: A3 landscape;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1400px;
+      height: 990px;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: #090d16;
+      color: #f1f5f9;
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.35);
+      padding-bottom: 16px;
+      margin-bottom: 14px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 26px;
+      color: white;
+      box-shadow: 0 0 24px rgba(79, 70, 229, 0.5);
+    }
+
+    .header-titles h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-titles p {
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .header-right {
+      text-align: right;
+    }
+
+    .institute-pill {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #a5b4fc;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .live-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      margin-top: 5px;
+    }
+
+    /* GRID LAYOUT (3 Columns x 2 Rows) */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.05fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.8), transparent);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .accent-cyan { color: #38bdf8; }
+    .accent-indigo { color: #818cf8; }
+    .accent-amber { color: #fbbf24; }
+    .accent-emerald { color: #34d399; }
+    .accent-rose { color: #f43f5e; }
+    .accent-violet { color: #c084fc; }
+
+    .card p, .card li {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card li strong {
+      color: #f8fafc;
+    }
+
+    .card li::before {
+      content: '▸ ';
+      color: #818cf8;
+      font-weight: bold;
+    }
+
+    .stat-row {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .stat-pill {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    .stat-pill .num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    .stat-pill .lbl {
+      font-size: 9.5px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .formula-box {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: #a5b4fc;
+      margin: 8px 0;
+    }
+
+    /* FOOTER */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 11.5px;
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .footer-item span:first-child {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .footer-item span:last-child {
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .qr-placeholder {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      background: #4f46e5;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="badge-icon">P</div>
+      <div class="header-titles">
+        <h1>PathPatch Universal DT Lab</h1>
+        <p>Cross-Disciplinary Digital Twin Prototyping Platform & Semiconductor Hardware-in-the-Loop Simulator</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="institute-pill">VNRVJIET Incubation Application 2026</div>
+      <div class="live-url">https://path-patch.vercel.app</div>
+    </div>
+  </div>
+
+  <!-- 3x2 GRID -->
+  <div class="grid">
+
+    <!-- CARD 1: THE REAL PROBLEM -->
+    <div class="card">
+      <div class="card-title accent-rose">
+        <span>🚨</span> 1. The Core Problem: Hardware Fear & Silos
+      </div>
+      <p style="margin-bottom: 8px;"><strong>The Engineering Chasm:</strong> Millions of B.Tech students memorize textbook circuit formulas on blackboards without hands-on intuition.</p>
+      <ul>
+        <li><strong>Burnt Hardware Trauma:</strong> Accidental reverse polarity blows LM741 ICs; faculty docking marks causes students to fear breadboards.</li>
+        <li><strong>Software Silo Crisis:</strong> Colleges spend ₹26L+ on siloed desktop licenses (Multisim, ANSYS, STAAD) locked to 20 PC lab seats.</li>
+        <li><strong>The Missing Flight Simulator:</strong> Aviation mandates 500 simulator crash hours before touching a Boeing 777; colleges expect students to wire live circuits on Day 1.</li>
+      </ul>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">₹26 Lakhs</div><div class="lbl">Siloed Software Cost</div></div>
+        <div class="stat-pill"><div class="num">85,000</div><div class="lbl">Chip Engineer Deficit</div></div>
+        <div class="stat-pill"><div class="num">95%</div><div class="lbl">Tier-2/3 Colleges Locked</div></div>
+      </div>
+    </div>
+
+    <!-- CARD 2: THE DIGITAL TWIN ENGINE -->
+    <div class="card">
+      <div class="card-title accent-indigo">
+        <span>⚡</span> 2. Universal Digital Twin Simulation Engine
+      </div>
+      <p style="margin-bottom: 8px;"><strong>100% Web-Native Browser Physics:</strong> Zero software installation; executes instantly via WebAssembly & WebGL on standard $150 laptops and mobile phones.</p>
+      <ul>
+        <li><strong>Circuits Studio (/ece):</strong> Modified Nodal Analysis (MNA) matrix solver, 60 FPS oscilloscope & 10Hz-1MHz Bode analyzer with photorealistic components.</li>
+        <li><strong>Structural Studios (/truss, /beam):</strong> 2D Direct Stiffness Method [K]{u}={F} with automated Euler buckling flags; Euler-Bernoulli SFD/BMD profiles.</li>
+        <li><strong>Systems Studio (/cs):</strong> 3D WebGL Code Nebula with live OSV.dev and NVD CVE vulnerability graph inspection.</li>
+      </ul>
+      <div class="formula-box">
+        P_diss = (Vin - Vout) * Iload = (12 - 5) * 0.35 = 2.45W<br>
+        Tj = Ta + Pd * Rθja = 30°C + 88.2°C = 118.2°C &lt; 125°C
+      </div>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">60 FPS</div><div class="lbl">Real-Time Canvas</div></div>
+        <div class="stat-pill"><div class="num">Zero</div><div class="lbl">GPU Requirements</div></div>
+        <div class="stat-pill"><div class="num">4 Studios</div><div class="lbl">ECE/CSE/Civil/Mech</div></div>
+      </div>
+    </div>
+
+    <!-- CARD 3: FLY-BY-WIRE HIL HARDWARE -->
+    <div class="card">
+      <div class="card-title accent-cyan">
+        <span>🔌</span> 3. Hardware-in-the-Loop & Fly-By-Wire
+      </div>
+      <p style="margin-bottom: 8px;"><strong>The Physical Bridge:</strong> Bringing commercial flight envelope protection to physical engineering breadboards.</p>
+      <ul>
+        <li><strong>Smart Interposer Cartridge:</strong> Sub-₹155 add-on powered by WCH CH32V003 RISC-V coprocessor (chip cost: ₹13.80 / $0.16 USD).</li>
+        <li><strong>Active Fault Interception:</strong> Runs 15ms sub-threshold continuity scan; cuts power in &lt;800 ns if destructive short circuit or reverse polarity occurs.</li>
+        <li><strong>WebSerial HTML5 Telemetry:</strong> Live bidirectional sync between physical breadboard voltages and the digital twin browser display at 115200 baud.</li>
+      </ul>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">₹155.20</div><div class="lbl">Cartridge Total BOM</div></div>
+        <div class="stat-pill"><div class="num">&lt; 800 ns</div><div class="lbl">Electronic Disconnect</div></div>
+        <div class="stat-pill"><div class="num">115.2k</div><div class="lbl">WebSerial Baud Rate</div></div>
+      </div>
+    </div>
+
+    <!-- CARD 4: SEMICONDUCTOR FOUNDRY PIPELINE -->
+    <div class="card">
+      <div class="card-title accent-amber">
+        <span>🏭</span> 4. Semiconductor Foundry Pipeline (ISM)
+      </div>
+      <p style="margin-bottom: 8px;"><strong>$10 Billion National Tailwind:</strong> Aligning with Tata-PSMC Dholera fab and Micron OSAT to solve India's 85,000 chip design engineer shortage.</p>
+      <ul>
+        <li><strong>Breadboard to GDSII Flow:</strong> Automatically compiles breadboard circuits into synthesizable Verilog and DRC-clean SPICE netlists.</li>
+        <li><strong>Tiny Tapeout ASIC Shuttles:</strong> Direct integration with SkyWater 130nm & IHP 130nm open PDK foundry runs for as little as ₹15,000 per slot.</li>
+        <li><strong>Post-Silicon ATE Verification:</strong> Plugs physical manufactured microchip carrier into USB-C to verify simulation vs breadboard vs silicon.</li>
+      </ul>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">SkyWater 130nm</div><div class="lbl">Open PDK Target</div></div>
+        <div class="stat-pill"><div class="num">Tiny Tapeout</div><div class="lbl">MPW Foundry Shuttle</div></div>
+        <div class="stat-pill"><div class="num">₹600 Crore</div><div class="lbl">Domestic TAM</div></div>
+      </div>
+    </div>
+
+    <!-- CARD 5: MCP AGENT & 75% ATTENDANCE OS -->
+    <div class="card">
+      <div class="card-title accent-violet">
+        <span>🤖</span> 5. MCP Personal Agent & Daily Campus OS
+      </div>
+      <p style="margin-bottom: 8px;"><strong>All-Day Academic Companion:</strong> Powered by open Model Context Protocol (MCP) and deterministic AST guardrails.</p>
+      <ul>
+        <li><strong>75% Attendance Buffer Engine:</strong> CAMS-ERP sync; computes exact Safe Bunk count B_safe = ⌊(A - 0.75T)/0.75⌋ and recovery targets.</li>
+        <li><strong>Multimodal Subject Hub:</strong> Blackboard photo OCR, 65-slide PPT de-bloater into 1-page formula cards, 9:00 PM 3-min habit micro-quizzes.</li>
+        <li><strong>Master Socratic Instructor:</strong> 4-layer AST guardrails forbid direct answer leakage; guides students through troubleshooting proofs.</li>
+      </ul>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">100% Socratic</div><div class="lbl">Zero Answer Leakage</div></div>
+        <div class="stat-pill"><div class="num">Daily Habit</div><div class="lbl">8:00 AM & 9:00 PM OS</div></div>
+        <div class="stat-pill"><div class="num">CAMS-ERP</div><div class="lbl">Autonomous Sync</div></div>
+      </div>
+    </div>
+
+    <!-- CARD 6: B2B GRANTS & ACCREDITATION -->
+    <div class="card">
+      <div class="card-title accent-emerald">
+        <span>🏛️</span> 6. AICTE Grant Absorption & Accreditation
+      </div>
+      <p style="margin-bottom: 8px;"><strong>Zero College Operational Expense:</strong> Re-packaged as a 3-Year Capital Equipment Asset under GFR 2017 Rule 130 & Ind AS 38.</p>
+      <ul>
+        <li><strong>AICTE IDEA Lab Grant Absorption:</strong> Directly absorbs ₹4.20 Lakhs from institutional capital equipment grants, saving colleges ₹21,04,400 (81%).</li>
+        <li><strong>1-Click NBA & NAAC Evidence:</strong> Auto-generates tabular CO-PO attainment matrices for NBA SAR Criterion 3 & 6 and NAAC 2.3.1.</li>
+        <li><strong>Ready Procurement Dossier:</strong> Complete GFR 166 PAC Justification & GeM custom bid technical evaluation specifications.</li>
+      </ul>
+      <div class="stat-row">
+        <div class="stat-pill"><div class="num">₹21.04 Lakhs</div><div class="lbl">Grant Funds Saved</div></div>
+        <div class="stat-pill"><div class="num">120 Hours</div><div class="lbl">Faculty Excel Work Saved</div></div>
+        <div class="stat-pill"><div class="num">NBA SAR 3 & 6</div><div class="lbl">Automated Compliance</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-item">
+        <span>Project Title</span>
+        <span>PathPatch Universal DT Lab</span>
+      </div>
+      <div class="footer-item">
+        <span>Institution</span>
+        <span>VNR Vignana Jyothi Institute of Engineering & Technology</span>
+      </div>
+      <div class="footer-item">
+        <span>Incubation Scope</span>
+        <span>2-Month Intensive Cohort (Dec 2026 - Jan 2027)</span>
+      </div>
+      <div class="footer-item">
+        <span>Engineering Branches</span>
+        <span>ECE · CSE · Mechanical · Civil</span>
+      </div>
+    </div>
+    <div class="footer-right">
+      <div class="qr-placeholder">LIVE PROTOTYPE: https://path-patch.vercel.app</div>
+    </div>
+  </div>
+
+</body>
+</html>

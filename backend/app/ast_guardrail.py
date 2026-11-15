@@ -50,6 +50,12 @@ INJECTION_PATTERNS = [
         "DIRECT_ANSWER_EXTRACTION",
         "Direct answer request violates Socratic learning contract. Use diagnostic troubleshooting inquiry.",
     ),
+    # PII & Academic Record Exfiltration Defense
+    (
+        r"(?i)\b(attendance|internal marks|mid marks|cgpa|sgpa|grade)\b.*\b(of|for|all)\b.*\b(roll|student|classmate|[0-9]{2}[A-Z0-9]{8})\b",
+        "PII_ACADEMIC_RECORD_EXFILTRATION",
+        "Confidentiality violation: Cross-student academic records, attendance, and internal marks are strictly private under FERPA and DPDP regulations.",
+    ),
 ]
 
 
